@@ -4,6 +4,11 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from functools import lru_cache
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from tools.project_settings import read as project_settings
+
 
 from . import library as lib
 from .library import Zone
@@ -128,7 +133,10 @@ def _mallets_and_winds() -> list[Instrument]:
 
 @lru_cache(maxsize=None)
 def registry() -> dict[str, Instrument]:
-    insts = [Instrument("piano", "piano", lib.salamander(), kind="piano",
+    zones = (lib.salamander() if project_settings()["piano"] == "salamander" else
+             _v("Keys/Upright Nr1", rf"UR1_{NOTE}_(?P<layer>pp|mf|f)_RR(?P<rr>\d+)\.wav",
+                ["pp", "mf", "f"]))
+    insts = [Instrument("piano", "piano", zones, kind="piano",
                         release=0.5, width=0.7, veltrack=0.72, detune_cents=0.0)]
     insts += _strings() + _mallets_and_winds()
     return {i.name: i for i in insts}

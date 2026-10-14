@@ -46,6 +46,11 @@ model and the music sample libraries.
    your password once. It supports macOS (Homebrew), Debian and Ubuntu (apt) and Fedora (dnf). On
    another Linux it prints the package list and stops.
 
+   The installer then asks for two choices: frame rate (press Enter for 30 fps)
+   and piano library (press Enter for VSCO, which needs no attribution). Choose
+   Salamander only if you want its grand piano and accept the required credit on
+   screen and in the video description. These answers are saved for the project.
+
    Without administrator rights, add `--no-system` and give an administrator the output of
    `./system-deps.sh --dry-run` (run in the project folder). Run `./system-deps.sh` yourself
    later at any time, always in your own terminal.
@@ -66,14 +71,30 @@ Work only in the project folder from now on.
 ## What to expect
 
 **Setup.** Claude checks the machine and downloads what is missing, without administrator
-rights. Before downloading the music samples (about 3.4 GB) it asks whether the video will have
-music. If a system package is still missing, Claude stops and asks you to run
+rights. At project creation you choose the frame rate (30 fps by default) and
+VSCO piano (no attribution) or Salamander grand piano (requires attribution).
+The answers are saved in `project.json`; Salamander is used only with your explicit opt-in.
+Before downloading samples it asks whether the video will have music. VSCO is about
+2.2 GB to download; Salamander adds about 1.2 GB when selected. If a system package
+is still missing, Claude stops and asks you to run
 `./system-deps.sh` in a separate terminal, outside Claude Code, then continues.
 
 **Questions.** Claude asks about your product and where its code or site is, who the video is for,
 its goal, length and format, and whether you want narration, music and b-roll (each optional), the
 voice if you want narration, and what files you want at the end. It asks in a few groups, and
 only what changes the plan. If you tell it to stop asking and decide, it does.
+For frame rate and piano, delegated choices are 30 fps and VSCO; Salamander always
+requires your explicit consent. Saved answers are reused when you resume.
+
+To change the choices later, tell Claude or run this inside the project:
+
+```bash
+./configure.sh --fps 24 --piano vsco
+```
+
+Use `--piano salamander` to opt in to the grand piano, then run `./setup.sh` to
+download it. The chosen frame rate applies to captures, motion graphics and the
+final video. Existing media keeps its old settings until it is rendered again.
 
 **The API key.** If you want narration, generated b-roll or the listening judge, add this line to
 your shell profile (`~/.zshrc` on macOS, `~/.bashrc` on most Linux machines), open a new terminal
@@ -121,7 +142,7 @@ Rendering takes a while, more without a GPU. Claude tells you what it is waiting
 
 In the project folder, under `edit/out/`:
 
-- `intro.mp4`: the master, 1920x1080 at 60 fps;
+- `intro.mp4`: the master, 1920x1080 at your chosen frame rate (default 30 fps);
 - `intro-share.mp4`: a smaller 30 fps copy for social media and messaging, when you ask for it;
 - `edit/out/intro.srt`: subtitles, when the video has narration.
 
@@ -146,7 +167,7 @@ From the newer kit folder:
 
 It overwrites the kit's files that already exist in the project and deletes nothing, then runs
 `./system-deps.sh` again (add `--no-system` to skip that). It never
-overwrites `.claude/settings.json`, `.gitignore`, `music/CREDITS.md` or `broll/CREDITS.md`, and it
+overwrites `.claude/settings.json`, `.gitignore`, `project.json`, `music/CREDITS.md` or `broll/CREDITS.md`, and it
 leaves your `BRAND.md`, `brand/`, `design.json`, script and other project files alone, because the
 kit has no files of those names. If Claude patched a kit file during the project, `NOTES.md` lists
 the patch: ask Claude to re-apply it after the update. If the install is interrupted, run the same
@@ -171,3 +192,33 @@ Without `--force`, the install stops and writes nothing when any file already ex
 - **A colour, font or logo looks wrong**: change `BRAND.md` or `brand/` and ask Claude to rerun the
   brand step.
 - **Still stuck**: paste the failing line into the chat and ask Claude to diagnose it.
+
+## Share the project
+
+From the project folder:
+
+```bash
+./export.sh --output ../project.tar.gz
+```
+
+Choose an archive name that does not already exist, outside the project folder.
+The compressed archive preserves media (including narration, captures, b-roll and
+rendered videos), code, brand assets and saved choices. It omits downloaded sample
+libraries, Python environments, node_modules, caches, Git history and local
+credential files such as `.env`. An external or broken file link stops export;
+copy that project asset into the folder and export again.
+
+The recipient extracts the archive and opens a terminal in its project folder:
+
+```bash
+tar -xzf project.tar.gz
+cd <extracted-project-folder>
+./inflate.sh
+```
+
+This installs dependencies and downloads the selected libraries, browser and speech
+model. It needs internet access and may ask for an administrator password for
+system packages. With system packages already installed, use `./inflate.sh --no-system`.
+`./inflate.sh --check` checks readiness without installing anything. Supply API keys
+separately on the recipient's machine. Existing projects must be updated to this kit
+version before they can use export.

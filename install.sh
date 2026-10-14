@@ -8,7 +8,7 @@ KIT="$(cd "$(dirname "$0")" && pwd -P)"
 
 usage() {
   cat <<'EOF'
-Usage: ./install.sh <project-dir> [--force] [--no-system] [--setup]
+Usage: ./install.sh <project-dir> [--force] [--no-system] [--setup] [--fps N --piano vsco|salamander]
 
 Copies the kit into <project-dir> (created if missing):
   every top-level item except install.sh, claude-skills/ and claude-settings.json -> <project-dir>/
@@ -27,18 +27,24 @@ render output (out/, build/) and downloaded sample libraries (music/samples/) ar
             when you have no administrator rights and give `./system-deps.sh --dry-run` output
             to an administrator
   --setup   run <project-dir>/setup.sh after copying (after system-deps.sh) and exit with its status
+  --fps N --piano vsco|salamander  save the user's startup answers without terminal prompts.
+            Otherwise asks for frame rate (default 30) and piano (default VSCO, no attribution).
 
 Without --force the install stops, writing nothing, if any file it would write already exists.
 EOF
 }
 
 TARGET="" FORCE=0 SETUP=0 SYSTEM=1
+CHOICES=()
 while [ $# -gt 0 ]; do
   case "$1" in
     -h|--help) usage; exit 0 ;;
     --force) FORCE=1 ;;
     --setup) SETUP=1 ;;
     --no-system) SYSTEM=0 ;;
+    --fps|--piano)
+      [ $# -ge 2 ] || { echo "$1 needs a value" >&2; exit 2; }
+      CHOICES+=("$1" "$2"); shift ;;
     -*) echo "unknown option: $1 (try --help)" >&2; exit 2 ;;
     *) [ -z "$TARGET" ] || { echo "only one project folder allowed (try --help)" >&2; exit 2; }
        TARGET="$1" ;;
@@ -83,11 +89,12 @@ list_files() {
 }
 
 # mac_port_testing.md tests the kit itself and does not belong in a project
-KIT_LIST="$(list_files "$KIT" ./install.sh ./claude-skills ./claude-settings.json ./mac_port_testing.md)"
+KIT_LIST="$(list_files "$KIT" ./install.sh ./claude-skills ./claude-settings.json ./mac_port_testing.md ./tests)"
 # project-owned records: copied only when absent, never overwritten, even with --force
 KEEP_LIST="./.gitignore
 ./music/CREDITS.md
-./broll/CREDITS.md"
+./broll/CREDITS.md
+./project.json"
 COPY_LIST="" KEPT=""
 while IFS= read -r f; do
   if grep -qxF -- "$f" <<<"$KEEP_LIST" && { [ -e "$DEST/${f#./}" ] || [ -L "$DEST/${f#./}" ]; }; then
@@ -166,6 +173,8 @@ else
   echo "Skipped system packages (--no-system). Run ./system-deps.sh in $DEST yourself, or give"
   echo "the output of ./system-deps.sh --dry-run to an administrator."
 fi
+
+"$DEST/configure.sh" "${CHOICES[@]}"
 
 if [ "$SETUP" = 1 ]; then
   echo "Running setup.sh ..."

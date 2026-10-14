@@ -27,9 +27,10 @@ from scorekit import synth
 from scorekit.instruments import STEMS, registry
 from scorekit.library import SR
 from scorekit.mix import master, process_stems
-from scorekit.percussion import PERC, render_percussion
+from scorekit.percussion import KIT, PERC, SWELLS, render_percussion
 from scorekit.score import Score
 from scorekit.timing import Grid
+from tools.project_settings import read as project_settings
 
 HERE = Path(__file__).resolve().parent
 SYNTH_STEM = {"pluck": "synth", "sub": "bass"}
@@ -103,6 +104,16 @@ def render_dry(score: Score, length: int, seed: int) -> dict[str, np.ndarray]:
     return dry
 
 
+def sample_libraries(score: Score) -> list[str]:
+    names = {name for name, notes in score.notes.items() if notes}
+    libraries = set()
+    if "piano" in names:
+        libraries.add(project_settings()["piano"])
+    if names & (set(KIT) | set(SWELLS)) or names - set(PERC) - set(SYNTH_STEM) - {"piano"}:
+        libraries.add("vsco")
+    return sorted(libraries)
+
+
 def render(score: Score, out: Path, seed: int) -> tuple[dict, np.ndarray]:
     t_start = time.time()
     total = score.grid.total
@@ -121,6 +132,7 @@ def render(score: Score, out: Path, seed: int) -> tuple[dict, np.ndarray]:
         "loudness": report,
         "note_count": sum(len(v) for v in score.notes.values()),
         "render_seconds": round(time.time() - t_start, 1),
+        "sample_libraries": sample_libraries(score),
     })
     return man, mix
 

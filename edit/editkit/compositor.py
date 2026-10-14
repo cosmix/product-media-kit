@@ -3,6 +3,11 @@ shutter-sampled motion blur, bloom and grain.
 """
 
 import math
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from tools.project_settings import read as project_settings
+
 from dataclasses import dataclass, field
 
 import moderngl
@@ -25,7 +30,7 @@ def _lin(rgb):
 @dataclass
 class Quality:
     res: tuple = (1920, 1080)
-    fps: int = 60
+    fps: int = field(default_factory=lambda: project_settings()["fps"])
     grain: float = field(default_factory=design.grain)
     dof: bool = True
     motion_blur: bool = True

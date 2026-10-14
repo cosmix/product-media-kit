@@ -1,10 +1,10 @@
-"""Deterministic frame stepping: one virtual 1/60 s per captured frame.
+"""Deterministic frame stepping: one virtual 1/FPS s per captured frame.
 
 Per frame: advance the mock server's clock, wait until the page has received
 every frame the server sent, advance the page's faked clock (timers, rAF,
 Date, performance.now), dispatch this frame's input, seek every CSS
 animation and transition to the same virtual time, then screenshot. Nothing
-depends on how long a screenshot takes, so motion is exactly 60 fps.
+depends on how long a screenshot takes, so motion is at the chosen project frame rate.
 """
 
 from __future__ import annotations
@@ -15,12 +15,16 @@ import math
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
+from tools.project_settings import read as project_settings
+
 
 from playwright.async_api import Page
 
 from webcap.world import World
 
-FPS = 60
+FPS = project_settings()["fps"]
 
 INIT_SCRIPT = r"""
 (() => {

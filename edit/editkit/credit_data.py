@@ -77,8 +77,12 @@ def music_samples() -> list[Credit]:
     path = ROOT / "music" / "CREDITS.md"
     if not path.exists() or not SOUNDTRACK.exists():
         return []
+    manifest = ROOT / "music" / "manifest.json"
+    used = json.loads(manifest.read_text()).get("sample_libraries") if manifest.exists() else None
     out = []
     for heading, s in _md_sections(path).items():
+        if heading.startswith("Salamander") and used is not None and "salamander" not in used:
+            continue
         source = s.get("Source", "")
         by, _, url = source.partition(",")
         lic = s.get("Licence", "")

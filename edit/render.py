@@ -6,7 +6,7 @@
   uv run render.py --contact [--every 2]    contact sheet (one frame every N s) -> out/contact*.png
   uv run render.py --frames 12.5 40         single frames -> build/frames/*.png
 
-The frame rate is edl.py's FPS (default 60).
+The frame rate is edl.py's FPS or project.json (default 30).
 """
 
 import argparse
@@ -15,6 +15,10 @@ import subprocess
 import sys
 import time
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from tools.project_settings import read as project_settings
+
 
 import numpy as np
 from PIL import Image, ImageDraw
@@ -134,7 +138,7 @@ def main() -> None:
     OUT.mkdir(exist_ok=True)
     if not (a.frames or a.contact or a.allow_placeholders):
         require_real_assets()
-    fps = int(getattr(edl(), "FPS", 60))
+    fps = int(getattr(edl(), "FPS", project_settings()["fps"]))
     q = dataclasses.replace(PREVIEW, fps=min(30, fps)) if a.preview else Quality(fps=fps)
     total = edl().END
     start, end = a.range if a.range else (0.0, total)

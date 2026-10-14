@@ -24,6 +24,7 @@ pitfalls a finished video ran into. Each renderer has a self-test that runs with
   - [How the kit is used](#how-the-kit-is-used)
   - [Requirements](#requirements)
   - [Setup](#setup)
+    - [Share a project](#share-a-project)
     - [Install into a project](#install-into-a-project)
     - [System packages](#system-packages)
     - [What has been verified](#what-has-been-verified)
@@ -86,7 +87,7 @@ pitfalls a finished video ran into. Each renderer has a self-test that runs with
 
 ## What you make
 
-A video of about three minutes at 1920x1080 and 60 fps with:
+A video of about three minutes at 1920x1080 and your chosen frame rate (30 fps by default) with:
 
 - a narrator (Gemini TTS) reading a script the human and the lead agent write together;
 - an original score composed as Python code and rendered from free sample libraries;
@@ -137,14 +138,16 @@ and the Claude Code skills; nobody works inside it. For each video:
 **A project is a copy.** Later kit updates do not reach existing projects. To take an update, run
 the updated kit's `./install.sh <project-dir> --force`: it overwrites the engine files that have
 the same name and deletes nothing. It leaves `BRAND.md`, `brand/` and `design.json` alone, since
-the kit has no such files, and `.gitignore`, `music/CREDITS.md` and `broll/CREDITS.md`, which are copied only
+the kit has no such files, and `.gitignore`, `project.json`, `music/CREDITS.md` and `broll/CREDITS.md`, which are copied only
 when absent. It overwrites any engine file the project patched. Every such patch is recorded in
 the project's `NOTES.md`; read it before the update and re-apply the patches after it. If a
 `--force` install is interrupted, rerun the same command to finish it.
 
 **Each project has its own environments and samples.** `setup.sh` creates the project's Python
-environments and downloads its own sample libraries into `music/samples/` (about 3.4 GB download,
-5 GB on disk). `./setup.sh --no-samples` skips them for a video without music or with a score of
+environments and downloads selected sample libraries into `music/samples/`. VSCO is
+the default (about 2.2 GB download); the optional Salamander grand piano adds 1.2 GB.
+`install.sh` asks for frame rate (default 30 fps) and piano choice, saved in `project.json`.
+`./setup.sh --no-samples` skips samples for a video without music or with a score of
 synthesized instruments only.
 
 ## Requirements
@@ -281,17 +284,52 @@ synthesized instruments only.
    skills in `.claude/skills/` (`narration`, `brand`) are picked up automatically; in a session
    that was already running, run `/reload-skills`.
 
+### Share a project
+
+Run from an installed project, or pass its directory from the kit:
+
+```bash
+./export.sh --output ../my-video.tar.gz
+./export.sh /path/to/my-video --output /path/to/my-video.tar.gz
+```
+
+The gzip-compressed tar archive contains a single project folder, including source,
+settings, lockfiles, brand assets, narration, captures, b-roll and render outputs.
+It omits Python environments, node_modules, caches, downloaded music samples,
+machine-specific font resolution, Git history and local credentials (`.env`, `.aws`).
+Project media stays intact: paid/generated assets cannot safely be regenerated.
+External or broken symlinks stop export; copy those project assets into the folder first.
+The archive must be outside the project and must not already exist. The scripts use
+Python 3, or `uv` to provide Python when it is absent.
+
+Extract it, then restore the dependencies:
+
+```bash
+tar -xzf my-video.tar.gz
+cd my-video
+./inflate.sh
+# With system packages already installed (no administrator rights needed):
+./inflate.sh --no-system
+```
+
+Inflation runs system-deps.sh and setup.sh, restoring environments from lockfiles,
+selected samples, Chromium, fonts and the Whisper model. It needs network access;
+provide API keys separately. Saved piano/frame-rate choices travel with the archive.
+`./inflate.sh --check` reports missing dependencies without installing anything.
+To change them, run `./configure.sh --fps 24 --piano vsco` (or `--piano salamander`).
+Existing projects need the current kit installed with `--force` before export.
+
 ### Install into a project
 
 ```bash
-./install.sh <project-dir> [--force] [--no-system] [--setup]
+./install.sh <project-dir> [--force] [--no-system] [--setup] [--fps 30 --piano vsco]
 ```
 
 `install.sh` copies the kit into `<project-dir>` (created if missing; a relative path is fine, a
 path inside the kit folder is refused):
 
 - every top-level item of the kit except `install.sh`, `claude-skills/`, `claude-settings.json`
-  and `mac_port_testing.md`, with executable bits
+  `tests/` and `mac_port_testing.md`, with executable bits
   and dotfiles such as `.python-version`; `.venv`, `__pycache__`, `.pytest_cache`,
   `.ruff_cache`, `.mypy_cache`, `out/`, `build/`, `.git` and `music/samples/` are left out;
 - every skill under `claude-skills/` to `<project-dir>/.claude/skills/<name>/`, where Claude Code
@@ -306,15 +344,41 @@ path inside the kit folder is refused):
   says so and names the line to add.
 
 If the project already holds a file the install would write, it lists them and exits 1 without
-writing anything; `--force` overwrites those files and deletes nothing, except `.gitignore`, `music/CREDITS.md` and
+writing anything; `--force` overwrites those files and deletes nothing, except `.gitignore`, `project.json`, `music/CREDITS.md` and
 `broll/CREDITS.md`, which are never overwritten. That is how a project
 takes a kit update, and it overwrites engine files the project patched ([How the kit is
 used](#how-the-kit-is-used)). After copying, the install runs the project's `./system-deps.sh`
 in the human's terminal (it asks for the password itself); `--no-system` skips that for a
-machine where the human has no administrator rights. `--setup` then runs
+machine where the human has no administrator rights. It then asks for the project's
+frame rate and piano library. `--setup` then runs
 `./setup.sh` in the project and returns its exit code. It ends by printing the next
 steps: `cd` into the project, start `claude`, and say you want to make a video; the lead runs
 `./setup.sh` and asks the rest.
+
+**Startup choices.** Choose a frame rate (30 fps is the default; integer rates from
+1 to 120 are supported) and either VSCO upright piano (CC0, no attribution) or
+Salamander Grand Piano (CC BY 3.0, requires attribution on screen and in the video
+description). Salamander is neither downloaded nor used without explicit opt-in,
+even if its samples are already on disk. The saved defaults are:
+
+```json
+{"fps": 30, "piano": "vsco"}
+```
+
+Answers live in `project.json` and are reused on resume and kit updates. For an
+agent-led or non-interactive install, ask the user first and pass both answers:
+
+```bash
+./install.sh ~/my-video --fps 30 --piano vsco
+```
+
+Inside the project, `./configure.sh --fps 24 --piano vsco` changes the choices.
+Use `--piano salamander` only after the user accepts its attribution requirement,
+then rerun setup to fetch it. Web captures, terminal captures, motion renders and
+the master inherit the saved frame rate. Explicit motion `--fps` and edit `FPS`
+overrides still take precedence; omit them to keep the workstreams consistent.
+Changing settings does not rewrite existing media: rerender affected captures,
+motion and the master after a frame-rate change, or the score after a piano change.
 
 ### System packages
 
@@ -355,7 +419,7 @@ environments every self-test passed:
 | Workstream  | Self-test (run from its folder)      | Output                                                                                                                                                                                                                                        |
 | ----------- | ------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | motion      | `uv run python render.py --selftest` | prints `GL_RENDERER`; `out/selftest_01.50.png`, `out/selftest_contact.png` and `out/selftest.mp4` (2 s, 120 frames at 1920x1080: a text card, a circle, a rounded square, a hairline, and the logo under the card if `design.json` names one) |
-| edit        | `uv run bg_test.py [seconds]`        | `out/bg_test.mp4` (default 6 s at 1920x1080, 60 fps): the background and one browser-chrome window titled "edit self-test" around the placeholder `broll:selftest`                                                                            |
+| edit        | `uv run bg_test.py [seconds]`        | `out/bg_test.mp4` (default 6 s at 1920x1080, project frame rate): the background and one browser-chrome window titled "edit self-test" around the placeholder `broll:selftest`                                                                            |
 | music       | `uv run render.py --selftest`        | `out/selftest/soundtrack.wav` and stems, 17 s of synthesized C major at -16 LUFS                                                                                                                                                              |
 | TUI capture | `uv run tuicap --selftest`           | `../../captures/tui-selftest/selftest.mp4`                                                                                                                                                                                                    |
 
@@ -525,8 +589,11 @@ is for.
    interview in `CLAUDE.md` asks). The others are out of scope: no workstream, no brief, no questions about them.
 5. **Ask only the questions whose answers change the plan.** Typically: how to make the music
    (compose with real samples, or a local AI model with a non-commercial licence) if there is
-   music, the output format (1080p60), and the narrator's character and tone of voice if there is
-   narration (asked before any voice is rendered). Decide everything else and report it.
+   music, the output size and frame rate (suggest 1080p at 30 fps), and the narrator's
+   character and tone of voice if there is narration (asked before any voice is rendered).
+   Ask for VSCO only or Salamander with attribution before selecting sampled piano;
+   reuse answers already saved in `project.json`. If the user delegates these choices,
+   save 30 fps and VSCO. Decide everything else and report it.
 
 ### Phase 1: the timeline first
 
@@ -733,7 +800,7 @@ Narration, music, motion graphics and the edit run without the product.
 - **Target format**: see [Encoding](#encoding). Output names carry no version suffix: master
   `edit/out/intro.mp4`, share copy `edit/out/intro-share.mp4`; each re-render replaces them.
 - **Intermediates**: H.264 `-crf 10 -preset slow -pix_fmt yuv420p`, or ProRes 4444
-  (`yuva444p10le`) when alpha is needed; constant 60 fps. Captures at 3840x2160 so pushes stay
+  (`yuva444p10le`) when alpha is needed; constant frame rate from `project.json` (default 30 fps). Captures at 3840x2160 so pushes stay
   sharp; motion graphics at 1920x1080, rendered supersampled.
 - **Manifests**: every workstream writes a `manifest.json` next to its outputs: file, size, fps,
   duration and timed marks (`{t, event}`; the web manifest adds `key_marks` and per-frame cursor
@@ -1013,6 +1080,12 @@ instruments only (`pluck`, `sub`, the synthesized percussion) needs no sample li
 (`./setup.sh --no-samples`); a sampled instrument without them stops the render with a message
 naming the missing folder.
 
+**Piano choice.** `piano` uses VSCO's Upright Nr1 by default. The same score uses
+Salamander only when the user selects `"piano": "salamander"` in `project.json`.
+The music manifest records the libraries used by the rendered score, and the
+credits include Salamander only when that render used it. Changing the choice
+requires rerendering the score; it does not remove attribution from existing audio.
+
 **Score as code.** The composer writes the score as Python data (motifs, harmony, parts, an
 arrangement per section) and renders it with a small sampler: nearest sample per note and
 velocity, repitching for small intervals, release tails, round-robins, humanised timing, then
@@ -1246,7 +1319,7 @@ replay a scripted coding-agent session built with `webcap/agent_session.py`, whi
 way an Ink terminal UI does: sober text, a spinner, an input box).
 
 Capture is deterministic frame stepping (Playwright, Chromium, 1920x1080 at device scale 2,
-giving 3840x2160 at 60 fps): for every frame the mock's clock, the page's faked clock and every
+giving 3840x2160 at the project frame rate): for every frame the mock's clock, the page's faked clock and every
 CSS animation advance to the same instant, then a screenshot ([Snippets](#snippets)). Zero
 frame-time jitter. Files are written to `.tmp` and renamed atomically. `manifest.json` has marks,
 `key_marks` and a per-frame cursor track: headless browsers have no cursor, so the editor draws
@@ -1503,7 +1576,7 @@ word), which camera move, which transition. The project writes it; `editkit/proj
 for `render.py`, `mix.py` and `credits.py`. It defines `END` (the last frame, in seconds) and
 `build() -> Timeline`, and optionally `BROLL_CLIPS` (b-roll names the cut uses, for the credits),
 `BUSY` (scene keys where the mix ducks the melody further) and `FPS` (the master's frame rate,
-default 60; `--preview` renders at most 30). A skeleton:
+default from `project.json`, or 30 when absent; `--preview` renders at most 30). A skeleton:
 
 ```python
 from editkit import cards
@@ -2089,7 +2162,7 @@ Also check:
 
 ## Encoding
 
-**Target format**: 1920x1080 at 60 fps (another rate: set `FPS` in `edl.py`), H.264 High (yuv420p, BT.709, tv range), AAC 48 kHz
+**Target format**: 1920x1080 at the chosen frame rate (30 fps by default; set it with `./configure.sh --fps 30 --piano vsco`), H.264 High (yuv420p, BT.709, tv range), AAC 48 kHz
 stereo, -14 LUFS integrated with true peak at most -1 dBTP, faststart. Frame 0 is a designed
 image; the video ends on a fade to pure black (Y=16).
 
@@ -2358,7 +2431,7 @@ while proc.isalive():
 
 - **Music samples**: Salamander Grand Piano V3 (Alexander Holm, CC BY 3.0, credited on screen) and
   VSCO 2 Community Edition (Versilian Studios, CC0 1.0, no attribution needed), downloaded by
-  `setup.sh` unless it runs with `--no-samples`. `music/CREDITS.md` records sources, files, licences and which instruments each
+  `setup.sh` unless it runs with `--no-samples`; Salamander is downloaded and used only when `project.json` selects it. `music/CREDITS.md` records sources, files, licences and which instruments each
   library supplies; everything else in the score is synthesized.
 - **B-roll**: generated with Gemini Omni; no attribution required. `broll/CREDITS.md` states this
   and holds a section for any CC BY clip added later.

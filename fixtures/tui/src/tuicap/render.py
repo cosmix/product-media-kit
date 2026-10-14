@@ -1,4 +1,4 @@
-"""Replay a recorded byte stream through pyte and render 60 fps frames with skia."""
+"""Replay a recorded byte stream through pyte and render frames at the project frame rate with skia."""
 
 from __future__ import annotations
 
@@ -6,6 +6,10 @@ import subprocess
 import sys
 from dataclasses import dataclass
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[4]))
+from tools.project_settings import read as project_settings
+
 
 import pyte
 import skia
@@ -27,7 +31,7 @@ else:
     ]
     EMOJI_FONT = "/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf"
 
-FPS = 60
+FPS = project_settings()["fps"]
 CELL_W = 28  # px at 2x; the font size makes one advance fill a cell
 CELL_H = 58
 PAD = 48  # 24 px at 1x
