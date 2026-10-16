@@ -22,3 +22,10 @@
 **Why**: a section name is a link with no resolver.
 **Prevention**: cite a guide section only by a name that `tests/test_docs_contracts.py` resolves: it checks that every command, flag, module, link and section reference in the guides exists, pins the README section map, rejects stale names, and requires a language on every fence. Change a heading and the test says which citation to move.
 **Fix**: the contract test, and citations pointing at `guides/capture.md`, `guides/video.md` and `guides/blog.md` sections.
+
+## Review findings arrived in four partial rounds
+
+**What happened:** The merge's review ran as a scoped read-only pass, a re-review of changed files, and two verifier runs; each surfaced one to five more defects (share on a silent master, bash 3.2 empty arrays, export omit globs, postkit reference forms), so fixes shipped in four rounds.
+**Why:** Each pass was narrowed to the areas named in its brief, the reviewer could not execute code, and non-blocking observations from verifiers were deferred to later rounds instead of fixed with the batch.
+**Prevention:** Before the first fix round, run one exhaustive review over the whole diff (every changed file, review plus an executing verifier in parallel), collect every finding and suggestion, and fix them in one round; re-review only to confirm.
+**Fix:** Two more fix rounds after the merge closed every finding.
