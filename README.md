@@ -83,8 +83,9 @@ The guides:
 - a GPU compositor in Python (moderngl) that places everything on 3D planes with window chrome,
   depth of field, motion blur and grading, mixes the audio, and writes subtitles and credits.
 
-Narration, the score and b-roll are each optional, chosen at kickoff. With none of the three the
-video is motion graphics and captures over sound design.
+Captures, narration, the score and b-roll are each optional, chosen at kickoff. With no narration,
+score or b-roll the video is motion graphics and captures over sound design. With no captures (for a product with no source code to run, or by choice) the video is b-roll,
+motion graphics, and narration or on-screen text, over music or sound design.
 
 **A blog post**, by default 1,200 to 1,800 words, in plain GitHub-flavoured markdown
 ([guides/blog.md](guides/blog.md)):
@@ -214,18 +215,18 @@ when `project.json` selects it.
    `./system-deps.sh` in a terminal outside Claude Code, or to ask an administrator. It runs
    under the bash 3.2 that macOS ships. It prints one line per item, in sections:
 
-   | Section             | Scope | What it checks or does                                                                                                                                                                                                            |
-   | ------------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+   | Section             | Scope | What it checks or does                                                                                                                                                                                                                                                                       |
+   | ------------------- | ----- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
    | Commands            | both  | `uv`, `curl`, `tar` (MISSING); `rg`, `tmux`, `claude` (WARN); ffmpeg and ffprobe: MISSING for the video with `libx264`, `prores_ks`, `aac` and a test encode through the hardware H.264 encoder, WARN for the blog ("clips only"); `libvpx-vp9` WARN; video also `unzip` and, on Linux, `xz` |
-   | Python environments | both  | `uv sync --frozen` in `fixtures/web/` and `fixtures/tui/`; video also `edit/`, `motion/`, `music/`; blog also `post/`                                                                                                              |
-   | GPU (OpenGL)        | video | opens the edit's and the motion renderer's GL contexts and reports their renderer                                                                                                                                                 |
-   | Fonts               | both  | `design.json` and the families it names (through `tools/fonts.py`), the system fonts, the terminal fallback fonts                                                                                                                 |
-   | Claude Code skills  | both  | `brand`, `narration` and `mediatime` in `.claude/skills/`; a missing one means: rerun `install.sh` from the kit                                                                                                                  |
-   | Brand               | both  | `BRAND.md` (WARN when absent: optional), `design.json` older than `BRAND.md` or a file in `brand/` (WARN), the logo (video)                                                                                                       |
-   | Sample libraries    | video | downloads and unpacks VSCO-2 CE, and Salamander only when `project.json` `piano` is `salamander`, into `music/samples/` (resumable; `--no-samples` skips them)                                                                    |
-   | Chromium            | both  | the browser Playwright drives, installed with `playwright install chromium`                                                                                                                                                       |
-   | Whisper model       | video | the model `edit/words.py` names, for narration word timings                                                                                                                                                                       |
-   | API key             | video | `GEMINI_API_KEY` (WARN when not set)                                                                                                                                                                                              |
+   | Python environments | both  | `uv sync --frozen` in `fixtures/web/` and `fixtures/tui/`; video also `edit/`, `motion/`, `music/`; blog also `post/`                                                                                                                                                                        |
+   | GPU (OpenGL)        | video | opens the edit's and the motion renderer's GL contexts and reports their renderer                                                                                                                                                                                                            |
+   | Fonts               | both  | `design.json` and the families it names (through `tools/fonts.py`), the system fonts, the terminal fallback fonts                                                                                                                                                                            |
+   | Claude Code skills  | both  | `brand`, `narration` and `mediatime` in `.claude/skills/`; a missing one means: rerun `install.sh` from the kit                                                                                                                                                                              |
+   | Brand               | both  | `BRAND.md` (WARN when absent: optional), `design.json` older than a file it is built from (WARN; "The brand skill" below), the logo (video)                                                                                                                                                  |
+   | Sample libraries    | video | downloads and unpacks VSCO-2 CE, and Salamander only when `project.json` `piano` is `salamander`, into `music/samples/` (resumable; `--no-samples` skips them)                                                                                                                               |
+   | Chromium            | both  | the browser Playwright drives, installed with `playwright install chromium`                                                                                                                                                                                                                  |
+   | Whisper model       | video | the model `edit/words.py` names, for narration word timings                                                                                                                                                                                                                                  |
+   | API key             | video | `GEMINI_API_KEY` (WARN when not set)                                                                                                                                                                                                                                                         |
 
    It exits 1 while anything required is MISSING. Rerun it until the summary shows `0 MISSING`.
    WARN lines are optional, and each affects one thing: the API key only a narrated voice,
@@ -478,7 +479,7 @@ piece goes to the tier that succeeded.
    reads it, never a number from a message, and when it changes the lead sends absolute windows,
    not deltas. The post references an image only as `shot:<source>/<scenario>/<label>`, an id
    from a capture manifest, never by file path. Both media take claims from `claims.md` and
-   fixture data from `scenarios.md`.
+   fixture data from `scenarios.md` when there is one.
 4. **Human decisions are written down first.** Every decision and correction goes into `NOTES.md`
    before anyone is briefed; every agent treats that file as binding. Then the lead tells the
    affected agents, with exact times or scenario and label names, file or symbol references and
@@ -534,7 +535,9 @@ skill (`.claude/skills/mediatime/SKILL.md`) runs the kickoff:
    with `./setup.sh --check --for <media>`, then run `./setup.sh --for <media>` (`--no-samples`
    without music), and loop on `./system-deps.sh` for the human until `0 MISSING`.
 4. Interview: one shared group (product, source and PRD, audience and goal, captures and theme,
-   guidance, deliverables), then each medium's own group, skipping what is known.
+   guidance, deliverables), then each medium's own group, skipping what is known. A video may have
+   no product source and no captures; the interview then asks for the material the claims come
+   from.
 5. The Gemini key, when narration, b-roll or the listening judge is wanted.
 6. The brand skill.
 7. Write `project.json` `media`, `NOTES.md` (the decisions, by medium), `rates.json` when billed
@@ -551,7 +554,7 @@ A project that makes both media builds the shared parts once. These are shared b
 
 - **`project.json`, `BRAND.md`, `brand/`, `design.json`** and the HANDBOOK "Brand" section, with a
   part per role of each chosen medium.
-- **`claims.md`**: every claim, verified against the code once, with the places it is used. The
+- **`claims.md`**: every claim, verified once (against the code, or confirmed by the human when there is no product source), with the places it is used. The
   script and the outline take claims from it ([`claims.md` and
   `scenarios.md`](#claimsmd-and-scenariosmd)).
 - **`scenarios.md`**: one fixture story and one scenario table with a Media column. A scenario
@@ -638,8 +641,8 @@ post/draft.md + images.json + captures/*/manifest.json + design.json + project.j
 outputs/blog/ ──postkit check──> ERROR and WARN lines
 ```
 
-**Rebuild order after a change.** Shared: brand (the brand skill after `BRAND.md` or `brand/`
-changes, then every renderer that shows the change), claims, scenarios, captures (only the
+**Rebuild order after a change.** Shared: brand (the brand skill after `BRAND.md`, the logo, a
+font or a palette changes, then every renderer that shows the change), claims, scenarios, captures (only the
 scenarios the change touches). Video: narration, timeline, music (if timing moved), motion (if a
 scene window or its content changed), edit. Blog: outline, draft, build, check.
 
@@ -712,7 +715,8 @@ set. Two rules hold for any product:
   operator's own.
 
 Narration, music, motion graphics, the edit, the draft, the build and the check run without the
-product.
+product. A video with no captures needs none of this section: no `product.py`, no `PRODUCT_*`
+variables.
 
 ## Outputs
 
@@ -804,7 +808,7 @@ A heading that does not apply to the chosen media (music for a post) may stay em
 ### The brand skill
 
 `claude-skills/brand/` in the kit, installed to `.claude/skills/brand/`. The lead runs it at
-kickoff and again whenever `BRAND.md` or anything in `brand/` changes.
+kickoff and again whenever `BRAND.md` or a brand file `design.json` is built from changes.
 
 - **Without `BRAND.md`** it interviews the human, writes `BRAND.md` from the template and creates
   the `brand/` folders. The human then adds the logo and font files.
@@ -817,9 +821,11 @@ kickoff and again whenever `BRAND.md` or anything in `brand/` changes.
 `design.json` is generated: never hand-edit it. To change the look, change `BRAND.md` or `brand/`
 and rerun the skill; then re-render or recapture what shows the change (for the video delete
 `edit/build/placeholders/` first; for the post recapture the TUI scenarios when the terminal's
-colours or mono font changed) and rebuild. `setup.sh` and the checker warn when `design.json` is
-older than `BRAND.md` or a file in `brand/`; `brand/fonts/resolved.json` and `brand/fonts/.local/`,
-which `tools/fonts.py` writes, do not count.
+colours or mono font changed) and rebuild. `design.json` is built from `BRAND.md`, `brand/logo*`,
+`brand/fonts/`, `brand/palette/` and the font and logo files it names; `setup.sh` and the checker
+warn when one of them is newer than `design.json`. `brand/fonts/resolved.json` and
+`brand/fonts/.local/`, which `tools/fonts.py` writes, do not count, nor do `brand/reference/` and
+the photos and screenshots the human keeps in `brand/` (b-roll may start from them).
 
 ### The checker
 
@@ -844,7 +850,7 @@ exits 1 on any MISSING:
 | a logo does not parse, or has the wrong extension                                            | MISSING             |
 | a PNG logo under 2000 px wide                                                                | WARN                |
 | WCAG contrast: text on background below 4.5:1, secondary below 3:1                           | WARN                |
-| `design.json` older than `BRAND.md` or anything in `brand/`                                  | WARN                |
+| `design.json` older than a file it is built from ("The brand skill")                         | WARN                |
 
 It is a single-file `uv` script with its own pinned dependencies (fonttools, pillow).
 
@@ -1031,8 +1037,9 @@ product; each medium guide adds its own.
   scope exactly as the product does ("for every project, or just the one you're working on",
   never "for yourself"). Record each term in `NOTES.md`.
 - **Every claim checked.** A claim goes into the script or the draft only when `claims.md` marks
-  it verified against the code. Version numbers, defaults and limits come from the code, never
-  from memory. When the PRD and the code disagree, the code wins and the human decides the
+  it verified: against the code, or with no product source by the human's confirmation. Version
+  numbers, defaults and limits come from the code, or with no product source from the human's
+  material, never from memory. When the PRD and the code disagree, the code wins and the human decides the
   wording.
 - **No LLM-isms.** No "delve", "seamless", "robust", "leverage", "unlock", "elevate", "in today's
   world", "it's worth noting", no "not just X, but Y" constructions, no closing line that
@@ -1144,6 +1151,11 @@ A claim is verified only when the code shows it. When the PRD and the code disag
 wins and the lead asks the human how to treat it (a feature behind a flag, a renamed setting, a
 default that changed). An unverified claim goes into neither medium.
 
+With no product source (a video only), the source column cites the human's material instead: a
+PRD, a docs page, a website URL, or the human's own statement recorded in `NOTES.md`. A claim is
+marked verified only after the human confirms it, at the latest when they approve the script. The
+lead records "no product source" and the sources used in the `NOTES.md` Kickoff section.
+
 **`scenarios.md`**: the one fixture story and the scenarios that show it. Every capture shows the
 same imaginary project, account or dataset, so the web UI, the terminal, the motion graphics and
 the prose agree. Write it once, as data, and let the web mock, the TUI fixtures and every scene
@@ -1176,7 +1188,9 @@ copy it from here:
   one. Show only what the real product renders, named as the product names it.
 
 The human approves `scenarios.md` (with the script or the outline) before any capture starts;
-record the approval in `NOTES.md`.
+record the approval in `NOTES.md`. A video with no captures, and no motion scene that shows the
+product's data, has no `scenarios.md`: skip it, and the human approves the script alone before
+production.
 
 ## Mistakes and pitfalls
 

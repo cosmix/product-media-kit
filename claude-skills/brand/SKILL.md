@@ -5,7 +5,7 @@ description: Set up and apply the project's brand guidelines for the video, the 
 
 # Brand
 
-`BRAND.md` at the project root holds the brand guidelines; `brand/` holds the assets. These
+`BRAND.md` at the project root holds the brand guidelines; `brand/` holds every asset. These
 tools read `design.json` (README.md, "Design system" and "Brand"), which this skill generates
 from them:
 
@@ -22,7 +22,7 @@ Files next to this one: `BRAND.template.md` (the guidelines template) and `check
 ## Rules
 
 - `BRAND.md` is the source of truth. `design.json` is generated from it. After any edit to
-  `BRAND.md` or `brand/`, run this skill again. Never hand-edit `design.json` unless `BRAND.md`
+  `BRAND.md` or a file `design.json` is built from (see "The brand/ layout"), run this skill again. Never hand-edit `design.json` unless `BRAND.md`
   says so.
 - Never invent a brand value: a colour, font, logo rule, tone or legal line. When `BRAND.md` and
   `brand/` do not give it, ask the human.
@@ -33,12 +33,17 @@ Files next to this one: `BRAND.template.md` (the guidelines template) and `check
 
 ## The brand/ layout
 
-| Folder             | Holds                                                                                      |
-| ------------------ | ------------------------------------------------------------------------------------------ |
-| `brand/logo/`      | SVG preferred, else PNG at least 2000 px wide; a light-on-dark and a dark-on-light variant |
-| `brand/fonts/`     | TTF, OTF or TTC files, with their licence files, in a folder per family                    |
-| `brand/palette/`   | optional: exported palettes (`.json`, `.css`, `.ase`, `.txt`); read hex values from them   |
-| `brand/reference/` | images or videos of the brand in use                                                       |
+| Path               | Holds                                                                                                             |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------- |
+| `brand/logo/`      | SVG preferred, else PNG at least 2000 px wide; a light-on-dark and a dark-on-light variant                        |
+| `brand/fonts/`     | TTF, OTF or TTC files, with their licence files, in a folder per family                                           |
+| `brand/palette/`   | optional: exported palettes (`.json`, `.css`, `.ase`, `.txt`); read hex values from them                          |
+| `brand/reference/` | images or videos of the brand in use                                                                              |
+| other files        | optional: product photos and screenshots, the human's own or licensed, which b-roll may start from (`shots.json`) |
+
+`design.json` is built from `BRAND.md`, `brand/logo*`, `brand/fonts/`, `brand/palette/` and the
+font and logo files it names. `check.py` and `setup.sh` warn when one of those is newer than
+`design.json`; `brand/reference/`, photos and screenshots never make it stale.
 
 ## When BRAND.md is missing
 
@@ -159,6 +164,7 @@ When `BRAND.md` names a font that is neither installed nor in `brand/fonts/`:
 
 `uv run .claude/skills/brand/check.py [project-root]` prints one line per item (`ok`, `WARN`,
 `MISSING`) and exits 1 on any `MISSING`. `WARN design.json ... rerun the brand skill` means
-`BRAND.md` or a file in `brand/` changed after `design.json` was written: run this skill again.
+`BRAND.md` or a file `design.json` is built from changed after `design.json` was written: run
+this skill again.
 For family-named fonts it also runs `tools/fonts.py --check` and reports each family it cannot
 find (`MISSING`) and each style it cannot match exactly (`WARN`).

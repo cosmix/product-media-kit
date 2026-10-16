@@ -20,7 +20,7 @@ check, the kickoff interview, the Gemini key, the brand, the records and the sta
 
 ## Later sessions (`NOTES.md` exists)
 
-Read `NOTES.md`, `HANDBOOK.md` and `COSTS.md` if present, `claims.md` and `scenarios.md`, and per
+Read `NOTES.md`, `HANDBOOK.md` and `COSTS.md` if present, `claims.md` and `scenarios.md` if present, and per
 medium in `project.json`:
 
 - video: `edit/ISSUES.md` and `narration/timeline.json`;
@@ -69,9 +69,10 @@ particular), then the sections for its role before starting:
 - Web capture owns `fixtures/web/product.py`, its fixture data and `captures/web/`; TUI capture
   owns `fixtures/tui/product.py`, its fixture files and `captures/tui/`. In a project with both
   media one teammate per capture serves both.
-- Narration, music and b-roll are each optional; the human chooses at kickoff. A workstream the
-  human did not choose is out of scope: no role, no brief, no questions. Only the captures the
-  media need exist.
+- Captures (for a video), narration, music and b-roll are each optional; the human chooses at
+  kickoff. A workstream the human did not choose is out of scope: no role, no brief, no questions.
+  Only the captures the media need exist. A video with no captures has no capture roles and no
+  `PRODUCT_*` variables.
 - One owner per folder and per file. Import another agent's library or module, never modify it.
 - The kit is the engine; the project's own files (records, claims, scenarios, script, score,
   scenes, capture modules, edit decision list, outline, draft, `images.json`) are listed in README
@@ -88,15 +89,20 @@ particular), then the sections for its role before starting:
 
 - `BRAND.md` is the source of truth for look, voice and sound. `design.json` is generated from it
   by the brand skill and never hand-edited. Run the brand skill at kickoff and again whenever
-  `BRAND.md` or `brand/` changes.
+  `BRAND.md`, the logo, `brand/fonts/` or `brand/palette/` changes; other files in `brand/`
+  (photos, screenshots) do not feed `design.json`.
 - `NOTES.md` is the decision log and is binding. Write every human decision and correction there
   before briefing anyone; its one "Rejected styles" list binds every workstream of both media.
 - Claims come from the code. Every claim either medium makes is in `claims.md` with its source and
   is verified against the code before it goes into a script or a draft. When the PRD and the code
-  disagree, the code wins and you ask the human how to treat it.
+  disagree, the code wins and you ask the human how to treat it. With no product source (a video
+  only), every claim cites the human's material (a PRD, a docs page, a website URL, or their own
+  statement recorded in `NOTES.md`) and is marked Verified only after the human confirms it, at
+  the latest when they approve the script. Unverified claims still go into neither medium.
 - One fixture story, written once in `scenarios.md`: the same names, ids and numbers in every
   capture, scene and sentence. The human approves `scenarios.md`, with the script or
-  `post/outline.md`, before any capture starts.
+  `post/outline.md`, before any capture starts. A video with no captures and no product data in
+  its scenes has no `scenarios.md`; the human approves the script alone.
 - Review every output yourself before the human sees anything: Read every PNG in `captures/` and
   every built image, contact sheets, stills and measurements (`guides/video.md` "Review and QA",
   `guides/blog.md` "Review and QA"), the listening judge for audio when `GEMINI_API_KEY` is set

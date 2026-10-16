@@ -273,6 +273,39 @@ def test_setup_brand_newer_ignores_tools_fonts_output(tmp_path: Path) -> None:
     assert setup_brand_newer(root) == ["brand/fonts/Body-Regular.ttf"]
 
 
+def aged_brand_project(tmp_path: Path) -> Path:
+    """A project whose design.json names brand/mark.svg and is newer than BRAND.md."""
+    root = tmp_path / "project"
+    (root / "brand").mkdir(parents=True)
+    copy_setup(root)
+    (root / "BRAND.md").write_text("brand\n")
+    (root / "design.json").write_text('{"logo": {"on_dark": "brand/mark.svg"}}\n')
+    past = time.time() - 120
+    os.utime(root / "design.json", (past, past))
+    os.utime(root / "BRAND.md", (past - 60, past - 60))
+    return root
+
+
+def test_setup_brand_newer_ignores_photos_and_reference(tmp_path: Path) -> None:
+    root = aged_brand_project(tmp_path)
+    for rel in ("brand/hero.png", "brand/shots/dashboard.png", "brand/reference/in-use.png"):
+        (root / rel).parent.mkdir(parents=True, exist_ok=True)
+        (root / rel).write_bytes(b"png")
+
+    assert setup_brand_newer(root) == []
+
+
+@pytest.mark.parametrize(
+    "rel", ["brand/palette/brand.css", "brand/fonts/Body/Body-Regular.ttf", "brand/logo/logo.svg", "brand/mark.svg"]
+)
+def test_setup_brand_newer_reports_design_sources(tmp_path: Path, rel: str) -> None:
+    root = aged_brand_project(tmp_path)
+    (root / rel).parent.mkdir(parents=True, exist_ok=True)
+    (root / rel).write_text("changed\n")
+
+    assert setup_brand_newer(root) == [rel]
+
+
 def test_scripts_expand_arrays_in_a_form_bash_3_2_accepts() -> None:
     """macOS bash 3.2 fails "${ARR[@]}" on an empty array under set -u; ${ARR[@]+"${ARR[@]}"} is safe."""
     bare = re.compile(r'(?<!\+)"\$\{\w+\[@\]\}"')

@@ -23,7 +23,7 @@ motion/out/manifest.json       rendered motion scenes
 narration/*.txt                the script
 broll/candidates/              b-roll picks
 outputs/, outputs/blog/        rendered and built deliverables
-claims.md, scenarios.md, BRAND.md, design.json, rates.json, HANDBOOK.md
+claims.md, scenarios.md (absent in a video with no captures), BRAND.md, design.json, rates.json, HANDBOOK.md
 ```
 
 `project.json` missing means the project was not made by `install.sh`: tell the human to run
@@ -70,7 +70,8 @@ Then, with `<media>` as `video`, `blog` or `both`:
    `./system-deps.sh --dry-run`. When they say it is done, rerun `./setup.sh --check --for <media>`.
 4. Repeat until the summary shows `0 MISSING`. WARN lines are optional; explain one only when it
    matters for this project (README "Setup" lists what each affects; for a post, ffmpeg matters
-   only when it has clips).
+   only when it has clips). A video without captures ignores the Chromium, tmux and terminal
+   fonts WARNs ("web/terminal captures only").
 
 ## 4. The interview
 
@@ -81,12 +82,14 @@ line and ask only the new medium's group.
 **Shared group** (both media):
 
 - **Product**: what it does in a line, who it is for, and where its source and docs are (a path
-  or URL; read-only). Which features must appear.
+  or URL; read-only). Which features must appear. A video may have no product source: then ask
+  for the material the claims will come from (a PRD, a docs page, a website URL).
 - **PRD**: for a post always; for a video when there is one. A path, a URL, or a file they drop in
   the project folder. Read it in full before the next group.
 - **Audience and goal**: who watches or reads, where (site, social, a launch, the company blog),
   and what they should do or feel afterwards.
-- **Captures and theme**: web, terminal or both; light or dark. How to run the web frontend (a
+- **Captures and theme**: web, terminal or both; light or dark. None is an answer (always for a
+  video with no product source): skip the rest of this bullet. How to run the web frontend (a
   built `dist` folder for the mock server, or the URL of a running instance for live mode) and the
   CLI binary (README "Code that needs your product").
 - **Guidance**: tone, references (ask what each means to them), things to avoid, anything already
@@ -97,14 +100,18 @@ line and ask only the new medium's group.
 
 - **Length and format**: about two minutes by default (the kit makes two to three); 1920x1080 at
   the frame rate saved in step 3; whether they also want the smaller share copy for social media.
-- **Narration, music, b-roll**: each optional, any combination or none. A choice not made is out
-  of scope: no role, no brief, no questions about it.
+- **Captures, narration, music, b-roll**: each optional, any combination or none (captures were
+  asked in the shared group). A choice not made is out of scope: no role, no brief, no questions
+  about it. Without captures the video is b-roll, motion graphics, and narration or on-screen
+  text, over music or sound design.
   - Narration: the narrator's character and the tone of voice they want (warm and confident,
     upbeat, calm and authoritative, ...), and that a Gemini key is needed. Ask the tone before
     rendering any voice.
   - Music: genre and feel, and how to make it (compose with real sample libraries, or a local AI
     model with a non-commercial licence).
-  - B-roll: the kind of shots, generated with Gemini Omni.
+  - B-roll: the kind of shots, generated with Gemini Omni, and whether they have images (a product
+    photo, a screenshot, a logo) to start from; they must be their own or licensed, and go in
+    `brand/` with the other brand assets.
 - **Deliverables**: the master, the share copy, subtitles (only with narration), credits, any
   other files.
 
@@ -161,6 +168,8 @@ All of these are lead-owned files; write them yourself with the Edit or Write to
 - **`NOTES.md`**: the decision log (README "`NOTES.md`: the decision log"). A "Kickoff" section
   with the shared decisions, then one block per medium, then the "Rejected styles" list seeded
   from `BRAND.md`, "Things to avoid". When adding a medium, append its block; change nothing above.
+  With no product source, the Kickoff section says "no product source" and lists the material the
+  claims come from.
 - **`rates.json`**, when the video has narration or b-roll: the current prices from
   https://ai.google.dev/gemini-api/docs/pricing, with the date read, an entry for every model the
   project calls (the judge's too) (`guides/video.md`, "`COSTS.md`").
@@ -181,6 +190,6 @@ All of these are lead-owned files; write them yourself with the Edit or Write to
 ## 8. Start Phase 1
 
 Begin Phase 1 of `guides/video.md` or `guides/blog.md`, for the first medium in `media` (or the
-medium just added). Learn the product from its docs or PRD and code first, and start `claims.md`:
-both media take their claims from it. Tell the human what comes next and what they will review
+medium just added). Learn the product from its docs or PRD and code first (with no code, from the
+human's material alone), and start `claims.md`: both media take their claims from it. Tell the human what comes next and what they will review
 first (the script, or the outline and the scenarios).

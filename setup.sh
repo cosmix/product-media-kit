@@ -278,13 +278,19 @@ install_skills() {
   for d in $names; do install_skill "$d"; done
 }
 
-# brand_newer: files in BRAND.md and brand/ changed after design.json, relative to the project root;
-# brand/fonts/resolved.json and brand/fonts/.local/ are written by tools/fonts.py, so they do not count
+# brand_newer: the files design.json is built from that changed after it, relative to the project root,
+# sorted: BRAND.md, brand/logo*, brand/fonts/, brand/palette/, and every font and logo file design.json
+# names (a string ending in .svg, .png, .ttf, .otf or .ttc). brand/fonts/resolved.json and
+# brand/fonts/.local/ are written by tools/fonts.py; photos, screenshots and brand/reference/ are not
+# read for design.json. claude-skills/brand/check.py (design_sources) applies the same rule.
 brand_newer() {
-  if [ -e "$ROOT/BRAND.md" ] || [ -d "$ROOT/brand" ]; then
-    (cd "$ROOT" && find BRAND.md brand -type f -newer design.json ! -path brand/fonts/resolved.json \
-      ! -path 'brand/fonts/.local/*' 2>/dev/null || true)
-  fi
+  (cd "$ROOT" && {
+    find BRAND.md brand/logo* brand/fonts brand/palette -type f -newer design.json \
+      ! -path brand/fonts/resolved.json ! -path 'brand/fonts/.local/*' 2>/dev/null || true
+    grep -oiE '"[^"]*\.(svg|png|ttf|otf|ttc)"' design.json 2>/dev/null | tr -d '"' | while IFS= read -r f; do
+      if [ -f "$f" ] && [ "$f" -nt design.json ]; then printf '%s\n' "$f"; fi
+    done || true
+  } | LC_ALL=C sort -u) || true
 }
 
 # check_brand: BRAND.md and brand/ are optional; the brand skill generates design.json from them

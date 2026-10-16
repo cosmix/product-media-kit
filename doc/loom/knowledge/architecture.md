@@ -23,10 +23,14 @@ A product video and a blog post are built from the same sources: one fixture wor
 
 `narration/timeline.json` is the only clock ([architecture/narration](architecture/narration.md)). `motion/` renders scenes ([architecture/motion](architecture/motion.md)), `music/` renders the soundtrack ([architecture/music](architecture/music.md)), and `edit/` composites everything on the GPU from the project's `<project>/edit/edl.py`, mixes audio and encodes ([architecture/edit](architecture/edit.md)). Each of these is a separate uv project.
 
+## B-roll
+
+`tools/genvideo.py` renders `broll/gen/shots.json` with Gemini Omni into `broll/gen/omni/`: text-to-video, or from images in `<project>/brand/` (`first_frame`, `first_last`, `reference`). Every unrendered shot is validated before the first paid call; only the paid call is retried. Detail: [architecture/broll](architecture/broll.md).
+
 ## Brand
 
 `claude-skills/brand/` turns `<project>/BRAND.md` plus `brand/` into `design.json` (keys `fonts`, `colors`, `logo`, optional `grain`); `tools/fonts.py` resolves family-named fonts to files; five loaders read it. Detail: [architecture/brand-and-design](architecture/brand-and-design.md).
 
 ## Tests and gates
 
-Each package has its own pytest suite run with `uv run --frozen pytest` from the package: `fixtures/web/tests`, `fixtures/tui/tests`, `post/tests`, `edit/tests`, and `tests/` for the kit (`test_kit.py` install, setup and system-deps behaviour on a fake kit, `test_brand.py`, `test_docs_contracts.py` guide commands, links and section references, `test_outputs_agree.py` the twin outputs modules, `test_contracts.py`). `tests/smoke.sh <kit-dir>` installs the kit into a scratch project and runs the selftests; it needs ffmpeg. Lint gate: `uv run --frozen ruff check .` per package with ruff's defaults; `ruff format` is not a gate. Conventions: [conventions](conventions.md).
+Each package has its own pytest suite run with `uv run --frozen pytest` from the package: `fixtures/web/tests`, `fixtures/tui/tests`, `post/tests`, `edit/tests`, and `tests/` for the kit (`test_kit.py` install, setup and system-deps behaviour on a fake kit, `test_brand.py`, `test_docs_contracts.py` guide commands, links and section references, `test_outputs_agree.py` the twin outputs modules, `test_contracts.py`, `test_genvideo.py` with a fake Gemini client, `test_lint.py` ruff over `tools/` and `claude-skills/`). `tests/smoke.sh <kit-dir>` installs the kit into a scratch project and runs the selftests; it needs ffmpeg. Lint gate: `uv run --frozen ruff check .` per package with ruff's defaults; `ruff format` is not a gate. Conventions: [conventions](conventions.md).

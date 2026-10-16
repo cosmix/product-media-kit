@@ -8,7 +8,7 @@
 
 | File | Description | Lines |
 | --- | --- | --- |
-| [architecture.md](architecture.md) | High-level component relationships, data flow, module dependencies | 32 |
+| [architecture.md](architecture.md) | High-level component relationships, data flow, module dependencies | 36 |
 | [entry-points.md](entry-points.md) | Key files agents should read first | 30 |
 | [patterns.md](patterns.md) | Architectural patterns discovered in the codebase | 48 |
 | [conventions.md](conventions.md) | Coding conventions discovered in the codebase | 36 |
@@ -22,7 +22,8 @@
 
 | Topic | Blurb | Lines |
 | --- | --- | --- |
-| [brand-and-design](architecture/brand-and-design.md) | design.json schema and its loaders, tools/fonts.py, brand skill, check.py | 25 |
+| [brand-and-design](architecture/brand-and-design.md) | design.json schema and its loaders, tools/fonts.py, brand skill, check.py | 29 |
+| [broll](architecture/broll.md) | genvideo.py: Omni b-roll, image modes, frame: continuity, validation, retry | 23 |
 | [edit](architecture/edit.md) | compositor, EDL asset refs, outputs naming, render, subs, credits and share copy | 24 |
 | [kit-plumbing](architecture/kit-plumbing.md) | install.sh, setup.sh, system-deps.sh, configure/export/inflate, settings… | 43 |
 | [motion](architecture/motion.md) | motion graphics renderer: scene modules, lib, encode, logo, manifest | 17 |

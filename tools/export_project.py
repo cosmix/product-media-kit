@@ -105,7 +105,7 @@ def export(root, output):
     try:
         with tarfile.open(temporary, "w:gz", compresslevel=9) as archive:
             for path, rel in entries(root):
-                def portable_link(info):
+                def portable_link(info, path=path):
                     if info.issym():
                         info.linkname = os.path.relpath(path.resolve(), path.parent)
                     return info

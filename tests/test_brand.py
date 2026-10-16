@@ -7,6 +7,8 @@ import subprocess
 import time
 from pathlib import Path
 
+import pytest
+
 KIT = Path(__file__).resolve().parents[1]
 CHECK = KIT / "claude-skills" / "brand" / "check.py"
 LOGO = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 10 10"><rect width="10" height="10"/></svg>'
@@ -105,18 +107,35 @@ def test_tools_fonts_output_does_not_age_design_json(tmp_path: Path) -> None:
 
     assert code == 0, out
     assert not stale_warnings(out), out
-    assert "newer than BRAND.md and brand/" in out, out
+    assert "newer than BRAND.md and the brand files it is built from" in out, out
 
 
-def test_newer_brand_asset_warns_that_design_json_is_old(tmp_path: Path) -> None:
-    root = make_project(tmp_path / "stale", GOOD)
+def test_photos_and_reference_do_not_age_design_json(tmp_path: Path) -> None:
+    """design.json is not built from photos, screenshots or brand/reference/, so they never age it."""
+    root = make_project(tmp_path / "photos", GOOD)
     age_project(root)
+    (root / "brand" / "hero.png").write_bytes(b"\x89PNG\r\n\x1a\n")
+    (root / "brand" / "shots").mkdir()
+    (root / "brand" / "shots" / "dashboard.png").write_bytes(b"\x89PNG\r\n\x1a\n")
     (root / "brand" / "reference" / "ref.txt").write_text("changed\n")
 
     code, out = run_check(root)
 
     assert code == 0, out
-    assert any("brand/reference/ref.txt" in ln for ln in stale_warnings(out)), out
+    assert not stale_warnings(out), out
+
+
+@pytest.mark.parametrize("source", ["brand/palette/brand.css", "brand/fonts/Body/Body-Regular.ttf", "brand/logo/logo.svg"])
+def test_newer_design_source_warns_that_design_json_is_old(tmp_path: Path, source: str) -> None:
+    root = make_project(tmp_path / "stale", GOOD)
+    age_project(root)
+    path = root / source
+    path.parent.mkdir(exist_ok=True)
+    path.write_text(path.read_text() if path.exists() else "changed\n")
+
+    _, out = run_check(root)  # the stand-in font does not parse (MISSING); only freshness is under test
+
+    assert any(source in ln for ln in stale_warnings(out)), out
 
 
 def test_grain_is_accepted(tmp_path: Path) -> None:

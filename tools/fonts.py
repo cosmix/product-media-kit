@@ -1,4 +1,3 @@
-#!/usr/bin/env -S uv run --script
 # /// script
 # requires-python = ">=3.11"
 # dependencies = [
@@ -112,7 +111,7 @@ def face_of(path: Path, index: int, font: TTFont) -> Face | None:
         italic = bool((os2.fsSelection & 1) if os2 else 0) or bool(head.macStyle & 2)
         axes = {a.axisTag: (a.minValue, a.defaultValue, a.maxValue) for a in font["fvar"].axes} if "fvar" in font else {}
         return Face(path, index, family, int(weight), italic, axes)
-    except Exception:  # fontTools raises many types for a damaged table
+    except Exception:  # noqa: BLE001 - fontTools raises many types for a damaged table
         return None
 
 
@@ -125,7 +124,7 @@ def read_faces(path: Path) -> list:
         else:
             with TTFont(path, lazy=True) as font:
                 faces = [face_of(path, 0, font)]
-    except Exception:  # not a font, or damaged
+    except Exception:  # noqa: BLE001 - not a font, or damaged
         return []
     return [f for f in faces if f]
 
@@ -198,7 +197,7 @@ def installed_files() -> list:
     files = set()
     if sys.platform != "darwin" and shutil.which("fc-list"):
         try:
-            out = subprocess.run(["fc-list", "--format", "%{file}\\n"], capture_output=True, text=True, timeout=60).stdout
+            out = subprocess.run(["fc-list", "--format", "%{file}\\n"], check=False, capture_output=True, text=True, timeout=60).stdout
             files.update(Path(line) for line in out.splitlines() if line)
         except (OSError, subprocess.SubprocessError):
             pass  # the folder scan below still runs
@@ -267,7 +266,7 @@ def resolve_all(roles: dict, check: bool):
         source, p = found
         try:
             paths[key] = materialize(p, family, source) if not check else p.face.path
-        except Exception as e:  # fontTools raises many types while instancing
+        except Exception as e:  # noqa: BLE001 - fontTools raises many types while instancing
             raise SystemExit(f"MISSING {family}: cannot make a {label(p.weight, p.italic)} file from {p.face.path}: {e}")
         print(f"{key:<22} {family:<20} {source:<12} {shown(paths[key])}")
         if not p.exact:

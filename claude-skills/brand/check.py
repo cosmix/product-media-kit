@@ -175,7 +175,7 @@ def check_font(path, mono):
         with open_font(path) as font:
             family = font["name"].getBestFullName() or path.name
             advances, lacking = ascii_advances(font)
-    except Exception as e:  # fontTools raises many types for a damaged file
+    except Exception as e:  # noqa: BLE001 - fontTools raises many types for a damaged file
         return "MISSING", f"does not parse as a font: {e}"
     if not mono:
         return "ok", family
@@ -214,7 +214,7 @@ def check_logo(path):
                 w, h = im.size
         else:
             w, h = svg_size(path)
-    except Exception as e:  # Pillow and the XML parser raise many types for a damaged file
+    except Exception as e:  # noqa: BLE001 - Pillow and the XML parser raise many types for a damaged file
         return "MISSING", f"does not parse: {e}"
     if path.suffix.lower() == ".png" and w < 2000:
         return "WARN", f"PNG {w}x{h}: under 2000 px wide; prefer SVG or a larger export"
@@ -228,7 +228,7 @@ def check_families(root):
         status("WARN", "font families", f"{script} not found: cannot check families; reinstall the kit")
         return
     try:
-        run = subprocess.run(["uv", "run", str(script), "--check"], cwd=root, capture_output=True, text=True, timeout=300)
+        run = subprocess.run(["uv", "run", str(script), "--check"], cwd=root, check=False, capture_output=True, text=True, timeout=300)
     except (OSError, subprocess.SubprocessError) as e:
         status("WARN", "font families", f"could not run tools/fonts.py: {e}")
         return
@@ -276,15 +276,26 @@ def check_contrast(data):
         status(level, f"contrast {name}", f"{ratio:.2f}:1 on {colors['background']} (WCAG floor {floor}:1)")
 
 
-def check_fresh(root):
+def design_sources(root, data):
+    """Paths (from root) of the files design.json is built from: BRAND.md, brand/logo*, brand/fonts/ (less tools/fonts.py
+    output), brand/palette/ and every font and logo file design.json names. Photos, screenshots and
+    brand/reference/ are not read for it. setup.sh (brand_newer) applies the same rule."""
+    brand = root / "brand"
+    tops = [root / "BRAND.md", *brand.glob("logo*"), brand / "fonts", brand / "palette"]
+    found = {p for top in tops for p in ([top] if top.is_file() else top.rglob("*"))
+             if p.is_file() and not is_derived(root, p)}
+    named = {v for v in named_paths(data).values() if (root / v).is_file()} if data else set()
+    return {str(p.relative_to(root)) for p in found} | named  # named paths as written, like setup.sh
+
+
+def check_fresh(root, data):
     design = root / "design.json"
-    sources = [root / "BRAND.md"] if (root / "BRAND.md").is_file() else []
-    sources += [p for p in (root / "brand").rglob("*") if p.is_file() and not is_derived(root, p)] if (root / "brand").is_dir() else []
-    newer = sorted(str(p.relative_to(root)) for p in sources if p.stat().st_mtime > design.stat().st_mtime)
+    sources = design_sources(root, data)
+    newer = sorted(rel for rel in sources if (root / rel).stat().st_mtime > design.stat().st_mtime)
     if newer:
         status("WARN", "design.json", f"older than {newer[0]}{f' and {len(newer) - 1} more' if len(newer) > 1 else ''}: rerun the brand skill")
     else:
-        status("ok", "design.json", "newer than BRAND.md and brand/")
+        status("ok", "design.json", "newer than BRAND.md and the brand files it is built from")
 
 
 def main():
@@ -300,7 +311,7 @@ def main():
     if data is not None:
         check_contrast(data)
     if (root / "design.json").is_file():
-        check_fresh(root)
+        check_fresh(root, data)
     print(f"\nSummary: {COUNTS['MISSING']} MISSING, {COUNTS['WARN']} WARN")
     sys.exit(1 if COUNTS["MISSING"] else 0)
 

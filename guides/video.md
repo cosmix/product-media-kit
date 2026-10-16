@@ -53,14 +53,18 @@ A video of about two to three minutes at 1920x1080 and the project's frame rate 
 - a GPU compositor in Python (moderngl) that places everything on 3D planes with window chrome,
   depth of field, motion blur and grading, mixes the audio, and writes subtitles and credits.
 
-Narration, the score and b-roll are each optional, chosen at kickoff. Without narration the
-sections are timed from their on-screen text or from set durations and there are no subtitles;
+Captures, narration, the score and b-roll are each optional, chosen at kickoff. Without narration
+the sections are timed from their on-screen text or from set durations and there are no subtitles;
 without music the mix is sound design alone; without b-roll the cut uses motion graphics and
-captures. With none of the three the video is motion graphics and captures over sound design. A
-choice not made is out of scope: no role, no brief, no questions about it.
+captures. With no narration, score or b-roll the video is motion graphics and captures over sound
+design. Without captures (a product with no source code to run, or by choice) the video is b-roll,
+motion graphics, and narration or on-screen text, over music or sound design: no capture roles, no
+capture questions, no `PRODUCT_*` variables, and `./setup.sh --check --for video` WARNs about
+Chromium, tmux and terminal fonts ("web/terminal captures only") do not matter. A choice not made
+is out of scope: no role, no brief, no questions about it.
 
 When the project also has a blog, the video takes the claims (`claims.md`), the fixture story
-(`scenarios.md`) and the captures from it, and gives back motion stills, logo renders and frames
+(`scenarios.md`) and the captures from it, when the video has captures, and gives back motion stills, logo renders and frames
 (`postkit add`). See `README.md` "Reuse between media". Run the captures with `--for both` when
 both media are chosen, so one capture serves both: the video needs the `clip.mp4` that the
 `video` and `both` profiles write at the project's frame rate (`guides/capture.md` "Profiles").
@@ -126,7 +130,8 @@ ownership of its folders:
 Only the workstreams the human chose exist: the composer only with music, b-roll only with
 b-roll, and the lead's narration work (script recording, takes, the judge) only with narration.
 Without narration the lead still owns `narration/`, because it holds the timeline. The capture
-roles are the same for a blog; their guide is `guides/capture.md`.
+roles are the same for a blog; their guide is `guides/capture.md`. A video with no captures has
+neither capture role.
 
 Pick the tier per job: Sonnet for a search-and-cut task, Opus for engineering-heavy capture and
 editing, Fable where taste is the product (motion design, music) or where an attempt at the same
@@ -149,6 +154,9 @@ and master made before it; after a change of piano, rerender the score.
 Learn the product from its own documentation first: read the repository's docs index and pull
 only the sections the video needs (the features it will mention). Accurate claims in the script
 depend on this, and so do the fixtures later. Put the claims in `claims.md` and verify each one.
+With no product source, learn it from the human's material (a PRD, a docs page, a website URL)
+and have the human confirm each claim, at the latest when they approve the script
+(`README.md` "`claims.md` and `scenarios.md`").
 
 ### Phase 1: the timeline first
 
@@ -180,7 +188,9 @@ dataset, so the web UI, the terminal UI and the motion graphics agree. Write it 
 things the product shows (ids, names, states), every relationship between them, and the arc over
 time (what is true at the start, what changes in which order, how it ends, and how many on-screen
 seconds each change takes). The web mock, the TUI fixtures and every scene that shows the story
-copy it from that one table. Mark the rows the video uses in the Media column.
+copy it from that one table. Mark the rows the video uses in the Media column. A video with no
+captures and no motion scene that shows the product's data has no fixture story and no
+`scenarios.md`; the human approves the script alone.
 
 - If the story holds a graph, it has no redundant (transitively implied) edges. A reviewer will
   spot one in the rendered graph; check the data before capturing, because a fix afterwards costs
@@ -201,9 +211,10 @@ names under `captures/` and the edit's asset references.
 Every workstream runs in parallel from the spec and the timeline. Techniques, commands and
 lessons per workstream are in the sections below; capture is in `guides/capture.md`.
 
-**Rebuild order after a change**: brand (after `BRAND.md` or `brand/` changes: the brand skill,
-then every renderer that shows the change), narration, timeline, music (if timing moved), motion
-(if a scene window or its content changed), captures (only if the fixture story changed), edit.
+**Rebuild order after a change**: brand (after a change to `BRAND.md` or a brand file
+`design.json` is built from: the brand skill, then every renderer that shows the change),
+narration, timeline, music (if timing moved), motion (if a scene window or its content changed),
+captures (only if the fixture story changed), edit.
 
 ### Phase 4: the review loop
 
@@ -263,7 +274,7 @@ informed; cancel it when the work settles.
    voice variants, record takes in the chosen voice, judge them. Without: give each section its
    on-screen text or a duration.
 4. Build `timeline.json`. From here on it is the only clock.
-5. Write the shared spec: design system, fixture story (`scenarios.md`), deliverable conventions,
+5. Write the shared spec: design system, fixture story (`scenarios.md`, only with captures), deliverable conventions,
    manifest marks.
 6. Spawn one agent per workstream, each with exclusive ownership and a complete brief.
 7. Let the lead review every output with contact sheets, stills, crops and measurements.
@@ -864,19 +875,88 @@ B-roll is optional, chosen at kickoff. Without it there is no b-roll workstream,
 `BROLL_CLIPS` stays empty and the credits list none. Generated b-roll needs `GEMINI_API_KEY`.
 
 Generate b-roll with Gemini Omni only, never Veo: reviewers rejected Veo output as poor.
-`broll/gen/shots.json` is a list of `{"id", "prompt"}`; `genvideo.py` fixes the format (16:9,
+`broll/gen/shots.json` is a list of `{"id", "prompt"}` plus the optional `"images"` and `"mode"`
+below; an id is letters, digits, `_` and `-`, used once. `genvideo.py` fixes the format (16:9,
 1080p), and Omni returns about 10 s at 24 fps per shot. The script renders three shots at a time,
-retries a failed shot once, skips ids already rendered, and writes `broll/gen/omni/<id>.mp4` plus
-`<id>.json` (prompt, config, timing, attempts).
+retries a failed call once, skips ids already rendered, and writes `broll/gen/omni/<id>.mp4` plus
+`<id>.json` (prompt, config, the Omni `task`, clip length, timing, attempts, and the `mode` and
+`images` with their sha256 when the shot used images).
 
 ```json
 [
   {
     "id": "01_server_aisle",
     "prompt": "Slow dolly along ... No people. Photorealistic documentary footage, 35mm lens, shallow depth of field, natural film grain."
+  },
+  {
+    "id": "02_dashboard_push",
+    "mode": "first_frame",
+    "images": ["brand/hero.png"],
+    "prompt": "Slow camera push-in on this screen, subtle monitor glow, no text changes."
+  },
+  {
+    "id": "03_aisle_continues",
+    "mode": "first_frame",
+    "images": ["frame:01_server_aisle"],
+    "prompt": "The camera keeps dollying left along the same aisle ... No people. Photorealistic documentary footage, 35mm lens, shallow depth of field, natural film grain."
   }
 ]
 ```
+
+A shot with no `images` is text-to-video. With `images` (paths from the project root to files the
+human put in `brand/`; png, jpeg or webp, the type read from the file content) it needs a `mode`:
+
+| `mode`        | Images | Omni task            | Use it for                                                                                                        |
+| ------------- | ------ | -------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `first_frame` | 1      | `image_to_video`     | A product photo or screenshot as the opening frame; the clip animates from it                                     |
+| `first_last`  | 2      | `image_to_video`     | `images[0]` is the first frame and `images[1]` the last; the prompt describes the move between them               |
+| `reference`   | 1 to 6 | `reference_to_video` | A logo or product that must appear in a new scene; the prompt names each as `<IMAGE_REF_0>`, `<IMAGE_REF_1>`, ... |
+
+A reference is not used as a literal first frame. Only a `reference` prompt contains
+`<IMAGE_REF_n>`, and it names each of `<IMAGE_REF_0>` up to one less than the image count, no
+other. Before the first call `genvideo.py` checks every shot not yet rendered (the fields above,
+files inside the project, the count for the mode, a real image, the size caps, the
+`<IMAGE_REF_n>` tokens) and exits listing every error with its shot id, so a bad entry costs
+nothing. The caps are the kit's own, since the Omni docs state none: 7 MB per image, 20 MB for all
+of a shot's images, 6 images. Ask the human for the images: they must be their own or licensed,
+never lifted from the web. Large zooms on screen text garble it (a long push-in turned terminal
+text to noise), so keep moves slow on text.
+
+**Continuity between shots.** An entry in a shot's `images` may be a frame of another shot's clip
+instead of a file: `frame:<shot id>` or `frame:<shot id>@last` (that clip's last frame), or
+`frame:<shot id>@<seconds>` (the frame at that time, for example `frame:01_server_aisle@4.5`). It
+works in every mode:
+
+- `first_frame` with the previous shot's last frame continues that shot;
+- `first_last` with a frame as `images[1]` makes a clip end on a frame of another shot, a bridge
+  into it;
+- `reference` with frames keeps a subject or place consistent across shots (the prompt still names
+  `<IMAGE_REF_n>`).
+
+`genvideo.py` extracts the frame with ffmpeg into `broll/gen/frames/<shot id>@<last|seconds>.png`,
+fresh before each render, and checks it like any image (size caps, png). `<id>.json` records it as
+`{"path", "sha256", "source": "frame:..."}`. Before any paid call it checks that the named shot is
+in `shots.json`, is not the shot itself, forms no cycle, and is rendered or rendered in this run.
+When the named shot renders in the same run, its frame (a time past its end, an oversized frame)
+can only be checked after that shot renders, and then the child fails without its own call: use
+`@last` or a time well under the clip length (Omni clips are about 10 s). A shot that uses a
+frame of another starts after that shot finishes; unrelated shots render in parallel, three at a
+time. When a shot fails, every shot that uses a frame of it, directly or down a chain, is skipped
+without a call. With `--only <id>`, a parent that is not rendered yet is an error: render it
+first. Re-rendering a parent does not re-render children already rendered:
+`genvideo.py` prints a warning naming each such child, and deleting the child's mp4 renders it
+again from the new clip.
+
+For a continuation, describe the motion carrying on from the frame ("The camera keeps dollying
+left along the same aisle ...") and keep the look words identical to the parent's prompt. The
+child's first frame repeats the parent's last, so in the edit start the child one frame in
+(`src_in` of 1/24 s; Omni clips are 24 fps) or dissolve between them. A chain drifts after several
+links; re-anchor a long chain with a `reference` frame from the first shot.
+
+`tools/costs.py` prices Omni with the `per_second` rate in `rates.json` ("`COSTS.md`: the cost
+estimate"): the rate times the clip length `genvideo.py` logs for each clip. A failed attempt logs
+no length, so it adds $0. `usage.jsonl` still records each attempt's input tokens, image tokens
+included, and `COSTS.md` counts them in its tokens column, but they add nothing to the estimate.
 
 ```bash
 uv run tools/genvideo.py [--only <shot id>]   # from the project root; needs GEMINI_API_KEY
@@ -977,6 +1057,9 @@ def build() -> Timeline:
     fade = Track((0.0, 0.0), (END - 1.9, 0.0), (END - 0.5, 1.0, "sine"))
     return Timeline(END, segs, fade=fade)
 ```
+
+A video with no captures uses no `web:` or `tui:` assets. A b-roll-only cut places each clip as a
+`fullframe` plane, for example `fullframe("broll:02_dashboard_push", t, t + 4.0, src_in=1 / 24)`.
 
 - **Asset keys** name sources (`editkit/assets.py`):
   - `web:<scenario>` and `tui:<scenario>`: `captures/<source>/<scenario>/clip.mp4`. When only

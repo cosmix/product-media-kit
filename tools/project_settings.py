@@ -17,7 +17,7 @@ DEFAULTS = {"fps": 30, "piano": "vsco"}
 def _saved(path):
     data = json.loads(path.read_text()) if path.exists() else {}
     if not isinstance(data, dict):
-        raise ValueError(f"{path}: expected an object")
+        raise ValueError(f"{path}: expected an object")  # noqa: TRY004 - main and configure report a bad project.json as ValueError
     return data
 
 

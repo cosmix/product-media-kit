@@ -11,9 +11,8 @@ import argparse
 import sys
 import time
 
-from google import genai
-
 import usage_log
+from google import genai
 
 p = argparse.ArgumentParser()
 p.add_argument("question")

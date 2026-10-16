@@ -45,4 +45,4 @@ The kit ships the engines; each project writes one product module per harness (`
 
 ## Brand pattern
 
-Optional `<project>/BRAND.md` plus `brand/` at the project root; the brand skill generates `design.json` and the HANDBOOK "Brand" section; nobody hand-edits `design.json`; `setup.sh` and `check.py` warn when it is older than its sources, ignoring files `tools/fonts.py` writes. Detail: [architecture/brand-and-design](architecture/brand-and-design.md).
+Optional `<project>/BRAND.md` plus `brand/` at the project root; the brand skill generates `design.json` and the HANDBOOK "Brand" section; nobody hand-edits `design.json`; `setup.sh` and `check.py` warn when it is older than a file it is built from (`<project>/BRAND.md`, `brand/logo*`, `brand/fonts/`, `brand/palette/`, the files it names), never for `tools/fonts.py` output, photos, screenshots or `brand/reference/`. Detail: [architecture/brand-and-design](architecture/brand-and-design.md).
