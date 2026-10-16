@@ -5,7 +5,7 @@ from __future__ import annotations
 import itertools
 import re
 from dataclasses import dataclass
-from functools import lru_cache
+from functools import cache
 
 PC = {"C": 0, "D": 2, "E": 4, "F": 5, "G": 7, "A": 9, "B": 11}
 
@@ -38,7 +38,7 @@ class Chord:
         return {(self.root + i) % 12 for i in g}
 
 
-@lru_cache(maxsize=None)
+@cache
 def chord(symbol: str) -> Chord:
     m = re.fullmatch(r"([A-G][b#]?)(6/9|[^/]*)(?:/([A-G][b#]?))?", symbol)
     if not m or m.group(2) not in QUALITIES:
@@ -73,7 +73,7 @@ def voice(ch: Chord, n: int, lo: int, hi: int, prev: list[int] | None = None,
     best, best_cost = None, float("inf")
     for combo in itertools.combinations(pool, k):
         notes = sorted(combo + ((top,) if top is not None else ()))
-        gaps = [b - a for a, b in zip(notes, notes[1:])]
+        gaps = [b - a for a, b in itertools.pairwise(notes)]
         if any(g < 2 for g in gaps) or any(g > 9 for g in gaps[1:]) or (gaps and gaps[0] > 12):
             continue
         present = {x % 12 for x in notes}

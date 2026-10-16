@@ -6,7 +6,7 @@ Everything is authored in 1920x1080 logical units; the renderer applies a
 logical pixels."""
 
 import sys
-from functools import lru_cache
+from functools import cache
 
 import moderngl
 import skia
@@ -31,7 +31,7 @@ def col(hexstr, a=1.0):
 def mixcol(h1, h2, u):
     a, b = rgb(h1), rgb(h2)
     u = max(0.0, min(1.0, u))
-    return "#%02x%02x%02x" % tuple(int(round(255 * (a[i] + (b[i] - a[i]) * u))) for i in range(3))
+    return "#" + "".join(f"{round(255 * (a[i] + (b[i] - a[i]) * u)):02x}" for i in range(3))
 
 
 # Palette: the project's design.json (lib/design.py); hairlines and card fills are mixed from it.
@@ -91,7 +91,7 @@ class Gpu:
 # ---------------------------------------------------------------- typography
 
 
-@lru_cache(maxsize=None)
+@cache
 def typeface(weight, italic=False):
     path = design.font(weight, italic)
     tf = skia.Typeface.MakeFromFile(path, 0)
@@ -100,7 +100,7 @@ def typeface(weight, italic=False):
     return tf
 
 
-@lru_cache(maxsize=None)
+@cache
 def font(size, weight=400, italic=False):
     f = skia.Font(typeface(weight, italic), size)
     f.setSubpixel(True)

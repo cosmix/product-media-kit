@@ -13,7 +13,7 @@ usage: uv run build_timeline.py             write timeline.json and print the sc
        uv run build_timeline.py --sources   print "name take [take2]" per line of sources.json
                                             (process.sh reads it; nothing without sources.json)
 
-sections.json (README.md, "Narration"):
+sections.json (guides/video.md, "Narration"):
   {"first_start": 2.5, "tail": 3.8,
    "sections": [{"name": "01_open", "style": "...", "gap": 0.0},
                 {"name": "02_pitch", "gap": 6.6, "pin": 28.15, "scene_start": 27.9},
@@ -43,7 +43,7 @@ READING = {"reading_cps": 15.0, "min_hold": 2.5, "pad": 1.0}
 def read(name: str) -> dict | list:
     path = HERE / name
     if not path.exists():
-        sys.exit(f"no {path}: see README.md, \"Narration\"")
+        sys.exit(f"no {path}: see guides/video.md, \"Narration\"")
     try:
         return json.loads(path.read_text())
     except json.JSONDecodeError as e:
@@ -84,7 +84,7 @@ def validate(spec: object) -> None:
     """Exit with a message naming the section and field for a sections.json that cannot build."""
     where = HERE / "sections.json"
     if not isinstance(spec, dict) or not isinstance(spec.get("sections"), list):
-        sys.exit(f"{where}: expected an object with a \"sections\" list (README.md, \"Narration\")")
+        sys.exit(f"{where}: expected an object with a \"sections\" list (guides/video.md, \"Narration\")")
     for k in READING:
         if k in spec:
             number(spec[k], f"{where}: {k}")

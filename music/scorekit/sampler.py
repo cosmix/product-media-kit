@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from functools import lru_cache
+from functools import cache
 
 import numpy as np
 import soxr
@@ -28,7 +28,7 @@ class Note:
     tags: set[str] = field(default_factory=set)
 
 
-@lru_cache(maxsize=None)
+@cache
 def sustain_end(path) -> int:
     """Sample index where the recorded sustain starts to die away."""
     x = load(path).mean(axis=1)
@@ -133,7 +133,7 @@ def render_note(note: Note, inst: Instrument, rng: np.random.Generator) -> tuple
     out *= (g * vel_gain * 10 ** ((inst.gain_db + note.gain_db) / 20))[:, None]
     pan = inst.pan if note.pan is None else note.pan
     out = _stereo(out, pan, inst.width)
-    start = int(round((note.t - inst.pre_roll) * SR))
+    start = round((note.t - inst.pre_roll) * SR)
     if start < 0:
         out = out[-start:]
         start = 0
@@ -165,7 +165,7 @@ def _render_zone(zone: Zone, pitch: float, total_s: float, inst: Instrument,
     return y
 
 
-@lru_cache(maxsize=None)
+@cache
 def _filters(lowpass: float | None, highpass: float | None):
     sos = []
     if lowpass:
@@ -181,7 +181,7 @@ def render_part(notes: list[Note], inst: Instrument, length: int, seed: int) -> 
     buf = np.zeros((length, 2), dtype=np.float64)
     counters: dict[int, int] = {}
     for note in sorted(notes, key=lambda n: n.t):
-        key = int(round(note.pitch))
+        key = round(note.pitch)
         note.rr = counters.get(key, 0)
         counters[key] = note.rr + 1
         start, block = render_note(note, inst, rng)

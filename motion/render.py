@@ -16,8 +16,8 @@ import time
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 
-from lib import gfx  # noqa: E402
-from lib.encode import Writer, contact_sheet, save_png  # noqa: E402
+from lib import gfx
+from lib.encode import Writer, contact_sheet, save_png
 
 OUT = os.path.join(HERE, "out")
 SCENES = os.path.join(HERE, "scenes")
@@ -34,10 +34,10 @@ def load(name, duration):
     if not os.path.exists(os.path.join(SCENES, f"{name}.py")):
         have = ", ".join(available()) or "none yet"
         sys.exit(f"no scene {name!r}: create motion/scenes/{name}.py defining SCENE, a lib.scene.Scene "
-                 f"subclass (README.md, \"Motion graphics\"). Scenes: {have}")
+                 f"subclass (guides/video.md, \"Motion graphics\"). Scenes: {have}")
     module = importlib.import_module(f"scenes.{name}")
     if not hasattr(module, "SCENE"):
-        sys.exit(f"motion/scenes/{name}.py defines no SCENE (README.md, \"Motion graphics\")")
+        sys.exit(f"motion/scenes/{name}.py defines no SCENE (guides/video.md, \"Motion graphics\")")
     return module.SCENE(duration)
 
 
@@ -84,7 +84,7 @@ def movie(scene, render, transparent, args):
     ext = "mov" if transparent else "mp4"
     fname = f"{scene.name}{args.suffix}{'_alpha' if transparent and not scene.alpha else ''}.{ext}"
     path = os.path.join(OUT, fname)
-    n = int(round(dur * args.fps))
+    n = round(dur * args.fps)
     w = Writer(path, args.fps, transparent)
     t0 = time.time()
     for i in range(n):

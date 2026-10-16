@@ -9,7 +9,13 @@ from dataclasses import dataclass
 
 import numpy as np
 import pyloudnorm as pyln
-from pedalboard import HighpassFilter, HighShelfFilter, LowpassFilter, PeakFilter, Pedalboard
+from pedalboard import (
+    HighpassFilter,
+    HighShelfFilter,
+    LowpassFilter,
+    PeakFilter,
+    Pedalboard,
+)
 from scipy import signal
 from scipy.ndimage import minimum_filter1d, uniform_filter1d
 
@@ -158,7 +164,7 @@ def _gain_envelope(mix: np.ndarray, ceiling_db: float, thresh_db: float, ratio: 
 
 def master(stems: dict[str, np.ndarray], total: float, target_lufs: float = -16.0,
            tp_ceiling: float = -1.0, fade: float = 3.0) -> tuple[np.ndarray, dict, dict]:
-    n = int(round(total * SR))
+    n = round(total * SR)
     stems = {k: v[:n] for k, v in stems.items()}
     fade_n = int(fade * SR)
     ramp = np.ones(n)

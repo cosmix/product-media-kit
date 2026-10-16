@@ -8,14 +8,14 @@ from pathlib import Path
 import matplotlib
 
 matplotlib.use("Agg")
-import matplotlib.pyplot as plt  # noqa: E402
-import numpy as np  # noqa: E402
-import soundfile as sf  # noqa: E402
-from scipy import signal  # noqa: E402
-from scipy.ndimage import maximum_filter1d, uniform_filter1d  # noqa: E402
+import matplotlib.pyplot as plt
+import numpy as np
+import soundfile as sf
+from scipy import signal
+from scipy.ndimage import maximum_filter1d, uniform_filter1d
 
-from .library import SR  # noqa: E402
-from .mix import true_peak_db  # noqa: E402
+from .library import SR
+from .mix import true_peak_db
 
 HOP = 0.01
 
@@ -39,7 +39,7 @@ def loudness_curve(x: np.ndarray, win: float, hop: float = 0.1):
 
 def onset_strength(x: np.ndarray) -> np.ndarray:
     """Half-wave rectified log-spectral flux, one value per HOP seconds."""
-    f, t, S = signal.spectrogram(x.mean(axis=1), SR, nperseg=2048, noverlap=2048 - int(HOP * SR))
+    _, _, S = signal.spectrogram(x.mean(axis=1), SR, nperseg=2048, noverlap=2048 - int(HOP * SR))
     L = np.log10(S + 1e-10)
     flux = np.maximum(0.0, np.diff(L, axis=1)).mean(axis=0)
     return flux - uniform_filter1d(flux, int(0.5 / HOP), mode="nearest")

@@ -9,7 +9,7 @@ import re
 import shutil
 import subprocess
 import sys
-from functools import lru_cache
+from functools import cache, lru_cache
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -34,14 +34,14 @@ def read() -> dict:
     except json.JSONDecodeError as e:
         raise ValueError(f"{HELP}: not valid JSON: {e}") from e
     if not isinstance(data, dict):
-        raise ValueError(f"{HELP}: expected a JSON object at the top level, got {type(data).__name__}")
+        raise TypeError(f"{HELP}: expected a JSON object at the top level, got {type(data).__name__}")
     objects = ("fonts", "colors", "logo", "fonts.weights")
     for key in objects:
         value = data
         for part in key.split("."):
             value = value.get(part, {}) if isinstance(value, dict) else {}
         if not isinstance(value, dict):
-            raise ValueError(f"{HELP}: {key} = {value!r}: expected an object")
+            raise TypeError(f"{HELP}: {key} = {value!r}: expected an object")
     return data
 
 
@@ -153,12 +153,12 @@ def mono() -> str:
     return font_path("fonts.mono", value) if value else system("mono")
 
 
-@lru_cache(maxsize=None)
+@cache
 def system(kind: str) -> str:
     family, mac, linux = SYSTEM[kind]
     paths = [f"/System/Library/Fonts/{mac}"] if sys.platform == "darwin" else []
     if sys.platform != "darwin" and shutil.which("fc-match"):
-        paths.append(subprocess.run(["fc-match", "-f", "%{file}", family], capture_output=True, text=True).stdout)
+        paths.append(subprocess.run(["fc-match", "-f", "%{file}", family], check=False, capture_output=True, text=True).stdout)
     paths += [f"/usr/share/fonts/{d}/{linux}" for d in ("truetype/dejavu", "TTF", "dejavu")]
     path = next((p for p in paths if p and Path(p).is_file()), None)
     if path is None:

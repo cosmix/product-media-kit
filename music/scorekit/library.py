@@ -11,7 +11,7 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass
-from functools import lru_cache
+from functools import cache
 from pathlib import Path
 
 import numpy as np
@@ -49,7 +49,7 @@ class Zone:
     hikey: int = 127
 
 
-@lru_cache(maxsize=None)
+@cache
 def load(path: Path) -> np.ndarray:
     """Load a sample as float32 stereo at SR, leading silence trimmed."""
     data, sr = sf.read(str(path), dtype="float32", always_2d=True)

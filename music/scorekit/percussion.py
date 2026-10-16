@@ -74,7 +74,7 @@ def _swell(note: Note) -> tuple[np.ndarray, int]:
     fade = int(min(lead, 0.6) * SR)
     if fade:
         x[:fade] *= np.linspace(0, 1, fade)[:, None] ** 2
-    return _shape(x, lead, 2.5), int(round((note.t - lead) * SR))
+    return _shape(x, lead, 2.5), round((note.t - lead) * SR)
 
 
 def _sampled(note: Note, rng: np.random.Generator) -> tuple[np.ndarray, float]:
@@ -87,7 +87,7 @@ def _sampled(note: Note, rng: np.random.Generator) -> tuple[np.ndarray, float]:
 
 
 def render_hit(note: Note, rng: np.random.Generator) -> tuple[int, np.ndarray]:
-    kind, start = note.inst, int(round(note.t * SR))
+    kind, start = note.inst, round(note.t * SR)
     pan = note.pan
     if kind == "kick":
         x, dflt = synth.kick(note.vel), 0.0
@@ -99,7 +99,7 @@ def render_hit(note: Note, rng: np.random.Generator) -> tuple[int, np.ndarray]:
         x, dflt = synth.sub_drop(note.vel), 0.0
     elif kind == "riser":
         x, dflt = synth.riser(note.dur, note.vel, rng), 0.0
-        start = int(round((note.t - note.dur) * SR))
+        start = round((note.t - note.dur) * SR)
     elif kind in SWELLS:
         x, start = _swell(note)
         dflt = 0.25

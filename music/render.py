@@ -4,7 +4,7 @@
     uv run render.py --selftest
 
 Composes the cue with the project's music/arrangement.py, whose compose(seed) returns a
-scorekit.score.Score (README.md, "Music"), and writes out/soundtrack.wav, out/stems/*.wav
+scorekit.score.Score (guides/video.md, "Music"), and writes out/soundtrack.wav, out/stems/*.wav
 (48 kHz, 24-bit, sample-aligned) and manifest.json (tempo, bar grid, section starts).
 --excerpt also writes out/excerpt.wav, a slice of the same render for the audio judge.
 --selftest renders eight bars of synthesized C major to out/selftest/ (no samples needed).
@@ -39,11 +39,11 @@ def compose(seed: int) -> Score:
     """The project's score, from music/arrangement.py."""
     if not (HERE / "arrangement.py").exists():
         sys.exit(f"no score: create {HERE / 'arrangement.py'} defining compose(seed) -> Score "
-                 "(README.md, \"Music\")")
+                 "(guides/video.md, \"Music\")")
     sys.path.insert(0, str(HERE))
     module = importlib.import_module("arrangement")
     if not hasattr(module, "compose"):
-        sys.exit(f"{HERE / 'arrangement.py'} defines no compose(seed) (README.md, \"Music\")")
+        sys.exit(f"{HERE / 'arrangement.py'} defines no compose(seed) (guides/video.md, \"Music\")")
     return module.compose(seed)
 
 
@@ -73,7 +73,7 @@ def render_synth(notes, length: int, seed: int) -> dict[str, np.ndarray]:
     out = {s: np.zeros((length, 2)) for s in set(SYNTH_STEM.values())}
     for n in sorted(notes, key=lambda n: n.t):
         x = synth.pluck(n.pitch, n.dur, n.vel, rng) if n.inst == "pluck" else synth.sub(n.pitch, n.dur, n.vel)
-        start = int(round(n.t * SR))
+        start = round(n.t * SR)
         end = min(length, start + len(x))
         if end > start:
             out[SYNTH_STEM[n.inst]][start:end] += x[: end - start]

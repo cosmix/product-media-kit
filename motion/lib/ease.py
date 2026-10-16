@@ -5,7 +5,7 @@ import math
 
 
 def clamp01(x):
-    return 0.0 if x < 0.0 else 1.0 if x > 1.0 else x
+    return 0.0 if x < 0.0 else min(x, 1.0)
 
 
 def seg(t, a, b):

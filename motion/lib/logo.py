@@ -12,7 +12,7 @@ A PNG renders through skia.Image with mipmapped sampling."""
 
 import re
 import xml.etree.ElementTree as ET
-from functools import lru_cache
+from functools import cache
 
 import skia
 
@@ -44,7 +44,7 @@ def svg_size(path: str) -> tuple[float, float]:
                      "add a viewBox or export a PNG")
 
 
-@lru_cache(maxsize=None)
+@cache
 def load(path: str):
     """(drawable, width, height) for a logo file: an SVGDOM or an Image, cached per path."""
     if path.lower().endswith(".png"):

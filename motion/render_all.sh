@@ -8,7 +8,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 H=0.5
 if [ ! -f scenes.txt ]; then
-  echo "no scenes.txt: list the scenes to render, one per line (README.md, \"Motion graphics\")" >&2
+  echo "no scenes.txt: list the scenes to render, one per line (guides/video.md, \"Motion graphics\")" >&2
   exit 1
 fi
 while IFS= read -r line || [ -n "$line" ]; do

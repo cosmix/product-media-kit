@@ -12,3 +12,8 @@ dependencies = [
     "pillow>=12.3.0",
     "skia-python>=144.0.post2",
 ]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.17.1",
+]

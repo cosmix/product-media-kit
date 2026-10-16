@@ -89,7 +89,7 @@ def main():
     a = ap.parse_args()
     if not (ROOT / "shots.json").exists():
         raise SystemExit(f"no shot list: create {ROOT / 'shots.json'}, a list of {{\"id\", \"prompt\"}} "
-                         "(README.md, \"B-roll\")")
+                         "(guides/video.md, \"B-roll\")")
     shots = [s for s in json.loads((ROOT / "shots.json").read_text()) if a.only in (None, s["id"])]
     client = genai.Client()  # reads GEMINI_API_KEY from the environment
     with ThreadPoolExecutor(max_workers=3) as ex:

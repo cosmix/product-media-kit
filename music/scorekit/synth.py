@@ -3,7 +3,7 @@ snaps and noise risers. All return stereo float64 blocks at SR."""
 
 from __future__ import annotations
 
-from functools import lru_cache
+from functools import cache
 
 import numpy as np
 from scipy import signal
@@ -15,12 +15,12 @@ def _hz(midi: float) -> float:
     return 440.0 * 2 ** ((midi - 69) / 12)
 
 
-@lru_cache(maxsize=None)
+@cache
 def _lp(fc: float, order: int = 2):
     return signal.butter(order, min(fc, SR * 0.45), "low", fs=SR, output="sos")
 
 
-@lru_cache(maxsize=None)
+@cache
 def _bp(lo: float, hi: float, order: int = 2):
     return signal.butter(order, [lo, min(hi, SR * 0.45)], "band", fs=SR, output="sos")
 

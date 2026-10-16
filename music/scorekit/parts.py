@@ -36,8 +36,8 @@ def ostinato(sc: Score, inst: str, start: float, end: float, pattern: tuple[str,
     step = 4.0 / div
     for bar, length, ch in sc.spans(start, end):
         tones = _tones(ch, floor)
-        n = int(round(length * div))
-        first = int(round((bar - int(bar)) * div))
+        n = round(length * div)
+        first = round((bar - int(bar)) * div)
         for k in range(n):
             idx = first + k
             vel = dyn.vel + dyn.accent[(idx * 8 // div) % 8] * (1.0 if div <= 8 else 0.7)

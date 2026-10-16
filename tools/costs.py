@@ -19,7 +19,7 @@ def load():
     rates_path, log_path = ROOT / "rates.json", ROOT / "usage.jsonl"
     if not rates_path.exists():
         sys.exit(f"no rates file: write {rates_path} from the pricing page "
-                 "(README.md, \"COSTS.md: the cost estimate\")")
+                 "(guides/video.md, \"COSTS.md: the cost estimate\")")
     rates = json.loads(rates_path.read_text())
     lines = log_path.read_text().splitlines() if log_path.exists() else []
     return rates, [json.loads(line) for line in lines if line.strip()]

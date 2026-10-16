@@ -1,7 +1,9 @@
 """Scene base: authored in nominal seconds, retimed uniformly by --duration.
 
 A project scene is a module motion/scenes/<name>.py that defines SCENE, a Scene subclass
-(README.md, "Motion graphics")."""
+(guides/video.md, "Motion graphics")."""
+
+from typing import ClassVar
 
 
 class Scene:
@@ -9,7 +11,7 @@ class Scene:
     key = None          # the timeline scene key it belongs to (for the manifest)
     nominal = 10.0      # authored length in seconds: the locked window from timeline.json
     alpha = False       # True: the scene is transparent by default (ProRes 4444 .mov)
-    marks = []          # [(nominal_t, event)]
+    marks: ClassVar[list] = []  # [(nominal_t, event)]
 
     def __init__(self, duration=None):
         self.duration = duration or self.nominal

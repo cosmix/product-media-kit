@@ -10,8 +10,8 @@ SHAKER_16 = (0, -10, -5, -9)     # velocity offsets per 16th; e and a lighter
 
 def shaker(sc: Score, start: float, end: float, vel: int, div: int = 16) -> None:
     step = 4.0 / div
-    n = int(round((end - start) * div))
-    first = int(round((start - int(start)) * div))
+    n = round((end - start) * div)
+    first = round((start - int(start)) * div)
     for k in range(n):
         idx = first + k
         off = SHAKER_16[idx % 4] if div == 16 else (0 if idx % 2 == 0 else -8)

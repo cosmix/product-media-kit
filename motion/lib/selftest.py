@@ -3,6 +3,8 @@ the plain ground, in the design file's fonts and colours, so one run exercises s
 the shared GL context and the encoder. It shows nothing of any product, except the project's
 logo (lib/logo.py) when design.json names one."""
 
+from typing import ClassVar
+
 import skia
 
 from . import design, gfx, logo
@@ -13,7 +15,7 @@ from .scene import Scene
 class SelfTest(Scene):
     name = "selftest"
     nominal = 2.0
-    marks = [(0.0, "start"), (1.0, "card in"), (2.0, "end")]
+    marks: ClassVar[list] = [(0.0, "start"), (1.0, "card in"), (2.0, "end")]
 
     def setup(self):
         # the logo fits a 320x130 box between the card and the rule

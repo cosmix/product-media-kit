@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from functools import lru_cache
+from functools import cache
 
 from . import library as lib
 from .library import Zone
@@ -63,9 +63,9 @@ def _v(folder: str, pattern: str, layers: list[str], sustained: bool = False) ->
 
 def _strings() -> list[Instrument]:
     s = "Strings/"
-    short = dict(release=0.35, veltrack=0.7, detune_cents=2.5)
-    sus = dict(kind="sustain", release=0.45, attack=0.03, pre_roll=0.06, veltrack=0.5,
-               detune_cents=3.0)
+    short = {"release": 0.35, "veltrack": 0.7, "detune_cents": 2.5}
+    sus = {"kind": "sustain", "release": 0.45, "attack": 0.03, "pre_roll": 0.06, "veltrack": 0.5,
+           "detune_cents": 3.0}
     return [
         Instrument("vln_spic", "strings",
                    _v(s + "Violin Section/Spic", rf"VlnEns_Spic_{NOTE}_(?P<layer>v\d)_rr(?P<rr>\d)\.wav", ["v1", "v2"]),
@@ -126,7 +126,7 @@ def _mallets_and_winds() -> list[Instrument]:
     ]
 
 
-@lru_cache(maxsize=None)
+@cache
 def registry() -> dict[str, Instrument]:
     insts = [Instrument("piano", "piano", lib.salamander(), kind="piano",
                         release=0.5, width=0.7, veltrack=0.72, detune_cents=0.0)]

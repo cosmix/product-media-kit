@@ -8,6 +8,11 @@ from PIL import Image, ImageDraw, ImageFont
 from . import design
 from .gfx import BG, H, W, rgb
 
+# setparams tags the frames: ffmpeg 9 lets frame properties override the output colour flags,
+# which would leave the stream's transfer and primaries "unknown".
+TO_BT709 = ("scale=out_color_matrix=bt709:out_range=tv,format=yuv420p,"
+            "setparams=color_primaries=bt709:color_trc=bt709:colorspace=bt709:range=tv")
+
 
 class Writer:
     def __init__(self, path, fps, alpha):
@@ -19,7 +24,7 @@ class Writer:
         if alpha:
             codec = ["-c:v", "prores_ks", "-profile:v", "4444", "-pix_fmt", "yuva444p10le", "-vendor", "apl0"]
         else:
-            codec = ["-c:v", "libx264", "-crf", "10", "-preset", "slow", "-pix_fmt", "yuv420p", "-movflags", "+faststart"]
+            codec = ["-vf", TO_BT709, "-c:v", "libx264", "-crf", "10", "-preset", "slow", "-pix_fmt", "yuv420p", "-movflags", "+faststart"]
         self.proc = subprocess.Popen(common + codec + [path], stdin=subprocess.PIPE)
 
     def write(self, rgba):
