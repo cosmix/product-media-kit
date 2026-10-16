@@ -22,7 +22,7 @@ while [ $# -gt 0 ]; do
 Usage: ./setup.sh [--check] [--for video|blog|both] [--no-samples]
 
   (no flag)     install Python environments, the Claude Code skills (brand, narration,
-                mediatime; into .claude/skills/ of this project), Chromium and, for a
+                begin; into .claude/skills/ of this project), Chromium and, for a
                 video, the Whisper model and sample libraries: VSCO (about 2.2 GB
                 download), plus the Salamander grand piano (1.2 GB) only when
                 project.json's piano is salamander (./configure.sh)
@@ -67,7 +67,7 @@ WARNED=0
 OS="$(uname -s)"
 SAMPLES="$ROOT/music/samples"
 SKILLS_DST="$ROOT/.claude/skills"
-KIT_SKILLS="brand narration mediatime" # the skills install.sh copies; checked where claude-skills/ is absent
+KIT_SKILLS="brand narration begin" # the skills install.sh copies; checked where claude-skills/ is absent
 
 # status LEVEL ITEM [HINT]: one line per item, counts WARN and MISSING
 status() {

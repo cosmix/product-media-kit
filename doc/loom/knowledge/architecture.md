@@ -5,7 +5,7 @@
 
 ## Kit repo versus installed project
 
-Nobody works inside the kit repo. `./install.sh <project-dir>` copies the engines into a project folder, derives the slug from the folder name and writes `project.json` (`{"slug": ..., "media": []}`); the `/mediatime` skill fills `media` (an ordered subset of video and blog) and saves the video's `fps` and `piano` through `./configure.sh`. The lead's instructions live in the kit as `claude-project.md` and install copies them to `<project>/CLAUDE.md`, so agents developing the kit never load them. The kit's own files (`install.sh`, `claude-skills/`, `claude-settings.json`, `doc/`, `tests/`) are not copied. Later kit updates reach a project only through `install.sh --force`. Scripts and the installed layout: [architecture/kit-plumbing](architecture/kit-plumbing.md).
+Nobody works inside the kit repo. `./install.sh <project-dir>` copies the engines into a project folder, derives the slug from the folder name and writes `project.json` (`{"slug": ..., "media": []}`); the kit's own `/install` skill (`.claude/skills/install/`, never copied) runs `install.sh --no-system`, saves the video's `fps` and `piano` through `./configure.sh` and writes `media` (an ordered subset of video and blog); the project's `/begin` skill confirms or fills them. The lead's instructions live in the kit as `claude-project.md` and install copies them to `<project>/CLAUDE.md`, so agents developing the kit never load them. The kit's own files (`install.sh`, `claude-skills/`, `.claude/`, `claude-settings.json`, `doc/`, `tests/`) are not copied. Later kit updates reach a project only through `install.sh --force`. Scripts and the installed layout: [architecture/kit-plumbing](architecture/kit-plumbing.md).
 
 ## One kit, two media
 

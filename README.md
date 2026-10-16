@@ -33,6 +33,7 @@ The guides:
 - [What you make](#what-you-make)
   - [The stack](#the-stack)
 - [How the kit is used](#how-the-kit-is-used)
+- [For the human](#for-the-human)
 - [Requirements](#requirements)
 - [Setup](#setup)
   - [Install into a project](#install-into-a-project)
@@ -107,7 +108,7 @@ What both media use; each medium guide lists its own tools.
 | Need             | Tool                                                                                            |
 | ---------------- | ----------------------------------------------------------------------------------------------- |
 | Team             | Claude Code: one lead session plus named teammates that message each other                      |
-| Kickoff          | the `mediatime` skill: machine check, interview, brand, records                                 |
+| Install, kickoff | the `install` skill (kit folder) and the `begin` skill (project): machine, interview, brand     |
 | Web UI capture   | Playwright (headless Chromium) with an aiohttp mock of the product's server, or a live URL      |
 | Terminal capture | the real CLI in a pty (`ptyprocess`), `pyte` as the terminal emulator, skia to draw each screen |
 | Clips            | deterministic frame stepping, then ffmpeg (H.264 for the video, VP9 WebM and GIF for the post)  |
@@ -117,15 +118,18 @@ What both media use; each medium guide lists its own tools.
 ## How the kit is used
 
 One kit serves many projects. The kit folder holds the engine, the guides, `HUMAN.md`, the
-project instructions (`claude-project.md`) and the Claude Code skills; nobody works inside it.
-For each project:
+project instructions (`claude-project.md`) and the Claude Code skills; nobody works inside it
+except to install. For each project:
 
-1. The human runs `./install.sh <project-dir>` from the kit folder. It creates the project
-   folder with the engine, the guides, `CLAUDE.md` (from `claude-project.md`), `project.json`
-   and the skills in `.claude/skills/` ([Install into a project](#install-into-a-project)). It
-   refuses a target inside the kit folder.
-2. The human starts `claude` in the project folder and types `/mediatime`. The lead session
-   checks the machine, asks which media to make and the rest ([Kickoff](#kickoff)).
+1. The human starts `claude` in the kit folder and types `/install`. The kit's own `install`
+   skill (`.claude/skills/install/SKILL.md`, never copied into projects) asks where the project
+   goes and what to make, runs `./install.sh <project-dir> --no-system`, has the human run
+   `./system-deps.sh` in a second terminal, saves the video's choices and runs `./setup.sh`
+   ([Install into a project](#install-into-a-project)). `install.sh` creates the project folder
+   with the engine, the guides, `CLAUDE.md` (from `claude-project.md`), `project.json` and the
+   skills in `.claude/skills/`, and refuses a target inside the kit folder.
+2. The human starts `claude` in the project folder and types `/begin`. The lead session asks the
+   interview and the rest ([Kickoff](#kickoff)).
 3. All the work happens in the project folder: the brand files, the records, the script or the
    outline, the captures, the edit, the draft and every render and build.
 
@@ -139,7 +143,7 @@ For each project:
 the folder's name: lowercased, every run of other characters turned into one hyphen, `project`
 when nothing is left (`My_Post` gives `my-post`); the install prints a note when it differs from
 the name. The slug names every deliverable ([Outputs](#outputs)). `media` is an ordered subset of
-`video` and `blog`, filled by `/mediatime`; the capture engines and `setup.sh` read it for their
+`video` and `blog`, filled by `/install` and confirmed by `/begin`; the capture engines and `setup.sh` read it for their
 defaults. `fps` (a whole number from 1 to 120) and `piano` (`vsco` or `salamander`) are the
 video's frame rate and piano library, saved by `./configure.sh --fps N --piano vsco|salamander`,
 which keeps the other keys ([Kickoff](#kickoff)). A reader that finds no `fps` uses 30, no `piano`
@@ -159,6 +163,88 @@ interrupted, rerun the same command to finish it.
 environments and, for a video with music, downloads its own sample libraries into
 `music/samples/`: VSCO-2 CE (about 2.2 GB download), plus the Salamander grand piano (1.2 GB) only
 when `project.json` selects it.
+
+## For the human
+
+[HUMAN.md](HUMAN.md) holds the steps. This section holds what a human may ask Claude about
+afterwards.
+
+**Review.** Claude checks every piece itself before it shows it, using still frames, contact
+sheets, measurements and, with a Gemini key, an audio listener. The human reviews in this order.
+
+The video:
+
+- a **script** to approve first, one short section per scene, with the made-up data the captures
+  will show;
+- with narration, first a question about the **tone of voice**, then **voice variants** in that
+  tone to choose from; Claude picks only when told to;
+- **previews**: a fast render of the whole video or of a range, and stills of scenes Claude points
+  to;
+- the **final render**, only after the preview is approved.
+
+The blog post:
+
+- **the plan**, before any screenshot: `post/outline.md` (what the post says, section by section),
+  the claims with where in the code each comes from, and what each screenshot and clip shows;
+- **the assembled post** with its images, in any markdown viewer.
+
+Feedback is plain and short ("the opening is too slow", "the product calls it a workspace", "drop
+the guitar", "keep everything but redo the logo animation"). Claude writes each decision to
+`NOTES.md` first, so it is not asked twice and a rejected idea does not return in either medium,
+then applies it; a change to one beat or one image leaves the rest unchanged. Expect several
+rounds. Telling Claude to stop asking and decide works at any point. Renders take a while, more
+without a GPU; Claude says what it is waiting on.
+
+**Where things land.** Everything delivered is in `outputs/`, named as in [Outputs](#outputs).
+The post links its images relatively (`images/<file>`), so publish the final `.md` together with
+`outputs/blog/images/`. Claude gives the paths when it finishes. The project folder also holds
+`NOTES.md` (every decision), `HANDBOOK.md`, `COSTS.md` (the estimated spend on narration and
+b-roll, when the video has them) and the code that renders and captures everything, so a later
+session can change either medium or recapture after a product change.
+
+**Coming back later.** Start `claude` in the project folder and say what to change. Claude reads
+`NOTES.md`, `HANDBOOK.md` and the plans of each medium, runs `./setup.sh --check` once and resumes.
+After the product changes, ask for a recapture: the same screenshots and clips run again against
+the new version. When the project began without a Gemini key, set it and restart `claude` before
+asking for narration.
+
+**Adding the other medium later.** Start `claude` in the project folder and type `/begin`. Claude
+sees what the project has, asks only what the new medium needs, lists what it can reuse (screenshots,
+clips, claims, the made-up data, logo animations, b-roll) and starts ([Kickoff](#kickoff)).
+
+**Changing the video's frame rate or piano.** Ask Claude, or run `./configure.sh --fps 24 --piano
+vsco` in the project folder; after `--piano salamander` run `./setup.sh` to download it. The rate
+applies to captures, motion graphics and the master; media rendered earlier keeps its old rate
+until it is rendered again.
+
+**Updating a project to a newer kit.** Run `./install.sh <project-dir> --force` from the newer
+kit, as in [How the kit is used](#how-the-kit-is-used). It runs `./system-deps.sh` again; add
+`--no-system` to skip that. If Claude patched a kit file during the project, `NOTES.md` lists the
+patch: ask Claude to re-apply it after the update. A project made before `export.sh` existed needs
+this update before it can be exported.
+
+**If something goes wrong.**
+
+- **Setup reports MISSING**: run `./system-deps.sh` in a terminal outside Claude Code (or give an
+  administrator the output of `./system-deps.sh --dry-run`), then tell Claude to recheck.
+  `./setup.sh --check` lists what is missing and changes nothing.
+- **Narration, b-roll or the listening judge does not work**: check that `GEMINI_API_KEY` is set
+  in the terminal `claude` was started from and that billing is on for the key; restart `claude`
+  after setting it.
+- **Renders are slow**: expected without a GPU; ask for previews of a range instead of full
+  renders.
+- **No clips in the post**: clips need ffmpeg (on Fedora, `system-deps.sh` installs it). Run
+  `./system-deps.sh` in a terminal of your own, then ask Claude to capture the clips again.
+  Screenshots work without it.
+- **Screenshots show an old version of the product**: rebuild its web frontend (or point Claude at
+  the updated instance) and ask for a recapture.
+- **The install stops with "files already exist"**: the target holds a project. Use `--force` to
+  update it, or pick a new folder.
+- **A skill is not found** in a session open during the install: run `/reload-skills`, or restart
+  `claude`.
+- **A colour, font or logo looks wrong**: change `BRAND.md` or `brand/` and ask Claude to rerun
+  the brand step ([Brand](#brand)).
+- **Still stuck**: paste the failing line into the chat and ask Claude to diagnose it.
 
 ## Requirements
 
@@ -198,7 +284,7 @@ when `project.json` selects it.
 1. The human installs the kit into a new project folder ([Install into a
    project](#install-into-a-project)). That also runs `system-deps.sh`, the only step that needs
    administrator rights ([System packages](#system-packages)). The human then starts `claude`
-   there and types `/mediatime`. The steps below run in the project.
+   there and types `/begin`. The steps below run in the project.
 
 2. The lead sees what is missing, then fetches it. `setup.sh` needs no administrator rights:
 
@@ -221,7 +307,7 @@ when `project.json` selects it.
    | Python environments | both  | `uv sync --frozen` in `fixtures/web/` and `fixtures/tui/`; video also `edit/`, `motion/`, `music/`; blog also `post/`                                                                                                                                                                        |
    | GPU (OpenGL)        | video | opens the edit's and the motion renderer's GL contexts and reports their renderer                                                                                                                                                                                                            |
    | Fonts               | both  | `design.json` and the families it names (through `tools/fonts.py`), the system fonts, the terminal fallback fonts                                                                                                                                                                            |
-   | Claude Code skills  | both  | `brand`, `narration` and `mediatime` in `.claude/skills/`; a missing one means: rerun `install.sh` from the kit                                                                                                                                                                              |
+   | Claude Code skills  | both  | `brand`, `narration` and `begin` in `.claude/skills/`; a missing one means: rerun `install.sh` from the kit                                                                                                                                                                              |
    | Brand               | both  | `BRAND.md` (WARN when absent: optional), `design.json` older than a file it is built from (WARN; "The brand skill" below), the logo (video)                                                                                                                                                  |
    | Sample libraries    | video | downloads and unpacks VSCO-2 CE, and Salamander only when `project.json` `piano` is `salamander`, into `music/samples/` (resumable; `--no-samples` skips them)                                                                                                                               |
    | Chromium            | both  | the browser Playwright drives, installed with `playwright install chromium`                                                                                                                                                                                                                  |
@@ -281,7 +367,7 @@ when `project.json` selects it.
 
    If that says the marketplace is unknown, run
    `/plugin install frontend-design@claude-plugins-official` inside the session. The project's
-   skills in `.claude/skills/` (`brand`, `narration`, `mediatime`) are picked up automatically;
+   skills in `.claude/skills/` (`brand`, `narration`, `begin`) are picked up automatically;
    in a session that was already running, run `/reload-skills`.
 
 ### Install into a project
@@ -300,8 +386,9 @@ path inside the kit folder is refused):
   `outputs/` and `music/samples/` are left out;
 - `claude-project.md` as `CLAUDE.md`, the instructions every agent session in the project reads;
 - every skill under `claude-skills/` to `.claude/skills/<name>/`: `brand`, `narration`,
-  `mediatime`. A new skill added to the kit also goes into `KIT_SKILLS` in `setup.sh`, the list it
-  checks;
+  `begin`. A new skill added to `claude-skills/` also goes into `KIT_SKILLS` in `setup.sh`, the
+  list it checks. The kit's own `install` skill lives in `.claude/skills/install/` and is not
+  copied;
 - `claude-settings.json` as `.claude/settings.json` and `project.json`, each only when absent. If
   an existing settings file lacks the agent-teams entry, the install says so and names the line
   to add.
@@ -313,11 +400,13 @@ written only when absent. After copying, the install runs the project's `./syste
 human's terminal (it asks for the password itself); `--no-system` skips that for a machine where
 the human has no administrator rights. `--setup` then runs `./setup.sh` in the project and
 returns its exit code. It ends by printing the next steps: `cd` into the project, start `claude`,
-type `/mediatime`.
+type `/begin`.
 
-The install asks nothing. `--fps N --piano vsco|salamander`, given together, pre-answers the
-video's frame rate and piano library: the install saves them in `project.json` with
-`./configure.sh`, and `/mediatime` then reuses them. Without them `/mediatime` asks.
+The script asks nothing; the `install` skill does the asking and calls it with `--no-system`, then
+saves the choices itself after the system packages are in. `--fps N --piano vsco|salamander`, given
+together, save the video's frame rate and piano library in `project.json` with `./configure.sh`
+during the install, for a person who runs the script directly. The `begin` skill reuses saved
+values and asks only for the absent ones.
 
 ### System packages
 
@@ -522,31 +611,52 @@ informed; cancel it when the work settles.
 
 ## Kickoff
 
-The human types `/mediatime` (or says "let's make a video", "write a blog post"). The `mediatime`
-skill (`.claude/skills/mediatime/SKILL.md`) runs the kickoff:
+Two skills run it. `/install`, typed in the kit folder, installs and prepares the machine;
+`/begin`, typed in the project folder (or "let's make a video", "write a blog post"), runs the
+kickoff proper.
+
+The `install` skill (`.claude/skills/install/SKILL.md` in the kit, not copied into projects):
+
+1. Ask where the project goes (the folder name becomes the slug), what to make (video, blog post
+   or both, and which first), and for a video the frame rate (30 suggested), whether it has music
+   and, with music, the piano library: VSCO (CC0, no attribution) unless the human explicitly
+   picks the Salamander grand piano (CC BY 3.0: credited on screen and in the video description).
+   Also whether narration or generated b-roll is likely, which decides the Gemini key.
+2. Run `./install.sh <dir> --no-system`, unless `<dir>/project.json` exists (a rerun after a
+   restart resumes).
+3. Show `<dir>/system-deps.sh --dry-run --for <media>`; the human runs `./system-deps.sh` in a
+   second terminal (or gives the dry run to an administrator), and the skill rechecks. The skill
+   never runs sudo or the script itself.
+4. Save the choices with `./configure.sh --fps N --piano vsco|salamander` and write `media` into
+   `project.json`. A human who asks Claude to decide gets 30 fps and VSCO.
+5. Run `./setup.sh --check --for <media>` then `./setup.sh --for <media>` (`--no-samples` without
+   music) until `0 MISSING`.
+6. The Gemini key, when narration, b-roll or the listening judge is likely and the key is unset:
+   the human creates it with billing on, exports it in the shell profile and opens a new terminal.
+7. Hand over: `cd <dir> && claude`, then `/begin`.
+
+The `begin` skill (`.claude/skills/begin/SKILL.md` in the project) runs the kickoff:
 
 1. Read `project.json` and `NOTES.md`; list the media and artefacts that exist.
-2. Ask which media (video, blog post, both) and, for both, which comes first.
-3. With a video, ask its frame rate (30 suggested), whether it has music and, with music, the
-   piano library: VSCO (CC0, no attribution) unless the human explicitly picks the Salamander grand
-   piano (CC BY 3.0: credited on screen and in the video description). Save both with
-   `./configure.sh --fps N --piano vsco|salamander`; answers already in `project.json` are reused.
-   A human who asks Claude to decide gets 30 fps and VSCO. Check the machine for the chosen media
-   with `./setup.sh --check --for <media>`, then run `./setup.sh --for <media>` (`--no-samples`
-   without music), and loop on `./system-deps.sh` for the human until `0 MISSING`.
+2. Confirm `media` in one line when `/install` set it and there is no `NOTES.md`; otherwise ask
+   which media (video, blog post, both) and, for both, which comes first.
+3. With a video whose `fps` or `piano` is absent from `project.json`, ask them as above and save
+   them with `./configure.sh`. Check the machine with `./setup.sh --check --for <media>`; run
+   `./setup.sh --for <media>` only when the check reports MISSING or a medium is added, and loop on
+   `./system-deps.sh` for the human until `0 MISSING`.
 4. Interview: one shared group (product, source and PRD, audience and goal, captures and theme,
    guidance, deliverables), then each medium's own group, skipping what is known. A video may have
    no product source and no captures; the interview then asks for the material the claims come
    from.
-5. The Gemini key, when narration, b-roll or the listening judge is wanted.
+5. The Gemini key, when narration, b-roll or the listening judge is wanted and it is unset.
 6. The brand skill.
-7. Write `project.json` `media`, `NOTES.md` (the decisions, by medium), `rates.json` when billed
-   calls are planned, and, when a medium joins a project that already has one, a reuse inventory
-   in `NOTES.md` ([Reuse between media](#reuse-between-media)).
+7. Set or confirm `project.json` `media`; write `NOTES.md` (the decisions, by medium), `rates.json`
+   when billed calls are planned and, when a medium joins a project that already has one, a reuse
+   inventory in `NOTES.md` ([Reuse between media](#reuse-between-media)).
 8. Start Phase 1 of [guides/video.md](guides/video.md) or [guides/blog.md](guides/blog.md).
 
-Adding the other medium later is the same command: `/mediatime` sees the existing medium, asks
-only what the new one needs, and appends it to `media`.
+Adding the other medium later is the same command: `/begin` sees the existing medium, asks only
+what the new one needs, and appends it to `media`.
 
 ## Reuse between media
 
@@ -609,7 +719,7 @@ PNG and there is no GIF.
 - The fixture world: the mock server and the `SHOTS` scenarios stay; the video adds `CLIPS` with
   its choreography and key marks.
 
-**The reuse inventory.** When `/mediatime` adds a medium to a project that has one, it writes a
+**The reuse inventory.** When `/begin` adds a medium to a project that has one, it writes a
 "Reuse inventory" section into `NOTES.md`: each capture manifest (`captures/*/manifest.json`)
 with its scenarios, labels and the profile that made its clips, `motion/out/manifest.json`, the
 narration script, `claims.md`, `scenarios.md` and the b-roll picks, each marked reuse as is,
@@ -663,7 +773,8 @@ file.
 | -------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | project root                                 | both   | `README.md`, `HUMAN.md`, `CLAUDE.md`, `guides/`, `setup.sh`, `system-deps.sh`, `configure.sh`, `export.sh`, `inflate.sh`, `LICENSE`, `.gitignore`; `project.json` (written once by `install.sh`)                                                               | `BRAND.md`, `brand/`, `design.json` ([Brand](#brand)); `NOTES.md`, `HANDBOOK.md`, `claims.md`, `scenarios.md` ([Project records](#project-records)); video: `rates.json`, `COSTS.md` (generated from `usage.jsonl`)       |
 | `tools/`                                     | both   | `fonts.py` (finds the files for fonts `design.json` names by family), `project_settings.py` (`configure.sh`), `export_project.py` (`export.sh`); video: `setup-samples.sh` (sourced by `setup.sh`), `listen.py` (the listening judge), `genvideo.py` (Gemini Omni b-roll), `usage_log.py`, `costs.py` (writes `COSTS.md`) | none                                                                                                                                                                                                                     |
-| `claude-skills/` (in a project `.claude/skills/`) | both   | `brand/` (`SKILL.md`, `BRAND.template.md`, `check.py`), `mediatime/` (`SKILL.md`); video: `narration/` (`SKILL.md`, `tts.py`)                                                                                                                                 | none                                                                                                                                                                                                                     |
+| `claude-skills/` (in a project `.claude/skills/`) | both   | `brand/` (`SKILL.md`, `BRAND.template.md`, `check.py`), `begin/` (`SKILL.md`); video: `narration/` (`SKILL.md`, `tts.py`)                                                                                                                                     | none                                                                                                                                                                                                                     |
+| `.claude/skills/install/` (kit only)         | both   | `install/` (`SKILL.md`), never copied into a project                                                                                                                                                                                                                                                                      | none                                                                                                                                                                                                                     |
 | `fixtures/web/`                              | both   | `webcap/`: `capture` (the command), `project` (loads `product.py`, mock or live), `profiles`, `shots` (`Shooter`), `director` (frame stepping), `browser`, `boxes`, `encode`, `media`, `manifest`, `names`, `page_script`, `server`, `world` (scripted clock), `probe`, `verify`, `selftest`, `agent_session` and `ansi` (a scripted coding-agent terminal) | `product.py`: `SHOTS` and/or `CLIPS`, optional `CLIP_PATHS`, `VIEWPORT`, `THEME`, `LOCAL_STORAGE`, `FONT_PROBES`; mock mode `World` and `build_app`; live mode `BASE_URL`; plus fixture data ([guides/capture.md](guides/capture.md)) |
 | `fixtures/tui/`                              | both   | `src/tuicap/`: `clips` (the `tuicap` command), `capture` (pty recording, typed-command shots), `render` (pyte and skia), `shots` (`Still`), `encode`, `fonts`, `manifest`, `design`, `palette`, `glyphs`, `tmux_clip`                                            | `product.py`: `SHOTS` and/or `CLIPS`, optional `prepare()`, `TRUECOLOR`, `NOTES`; plus fixture files ([guides/capture.md](guides/capture.md))                                                                             |
 | `narration/`                                 | video  | `process.sh`, `build_timeline.py`                                                                                                                                                                                                                             | `NN_name.txt` scripts, `sections.json`, `sources.json`; generated: `vN/`, `final/`, `timeline.json`                                                                                                                      |
@@ -1205,7 +1316,7 @@ What went wrong in finished projects, for both media. Each medium guide and
 | Fixtures | Two captures showed different project names or numbers                                                             | One fixture story in `scenarios.md`; every capture copies it                                          |
 | Fixtures | A redundant dependency edge, or implausible fixture data, found after capture                                      | Review the fixture data for sense before capturing anything                                           |
 | Reuse    | A post added to a video project linked clips captured under the video profile: the page showed their posters      | Recapture the clips the post needs with `--for both`; the reuse inventory lists them                  |
-| Reuse    | Adding a video to a blog project changed the default viewport and every capture's size                             | Decide at `/mediatime`: recapture with `--for both`, or pin `VIEWPORT`; record it in `NOTES.md`       |
+| Reuse    | Adding a video to a blog project changed the default viewport and every capture's size                             | Decide at `/begin`: recapture with `--for both`, or pin `VIEWPORT`; record it in `NOTES.md`       |
 | Review   | A preview or a build containing an already-rejected element reached the human                                     | The lead reviews every output first; purge rejected elements from every agent's work                  |
 | Review   | A teammate reported a still or a contact sheet as fine; it was not                                                 | The lead Reads every image and contact sheet itself                                                   |
 | Team     | Messages crossed: agents reported on an old brief while a newer one sat in their inbox                             | Check whether the agent is running or idle and look at file timestamps before re-sending              |

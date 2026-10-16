@@ -13,10 +13,11 @@ saved frame rate (`fps`) and piano library (`piano`).
 ## First session (no `NOTES.md`, or `media` empty in `project.json`)
 
 This session is the lead. Greet the human in two or three sentences and say what will happen: you
-ask what to make (a video, a blog post or both), check the machine, ask a few questions, set up
-the brand, then plan, capture and build, and show previews for review. Then run the `mediatime`
-skill (`.claude/skills/mediatime/SKILL.md`), whatever the human said first. It holds the machine
-check, the kickoff interview, the Gemini key, the brand, the records and the start of Phase 1.
+confirm what to make (a video, a blog post or both), check the machine, ask a few questions, set
+up the brand, then plan, capture and build, and show previews for review. Then run the `begin`
+skill (`.claude/skills/begin/SKILL.md`), whatever the human said first. The kit's `install` skill
+has already copied the kit and normally saved `media`, `fps` and `piano`. `begin` holds the
+machine check, the kickoff interview, the Gemini key, the brand, the records and the start of Phase 1.
 
 ## Later sessions (`NOTES.md` exists)
 
@@ -28,7 +29,7 @@ medium in `project.json`:
 
 Resume where they leave off. Run `./setup.sh --check` once. Ask the human where things stand only
 if the records do not say. When the human asks for the medium the project does not have yet, run
-the `mediatime` skill again: it adds the medium and writes the reuse inventory.
+the `begin` skill again: it adds the medium and writes the reuse inventory.
 
 ## Read first
 
@@ -120,7 +121,7 @@ particular), then the sections for its role before starting:
 ### Video
 
 - `project.json` `fps` and `piano` are the human's choices, saved by `./configure.sh --fps N
-  --piano vsco|salamander` (the `mediatime` skill asks them); reuse them when resuming. Captures,
+  --piano vsco|salamander` (the `begin` skill asks for any absent one); reuse them when resuming. Captures,
   motion graphics and the master render at `fps` (default 30): leave `FPS` out of `edit/edl.py`
   and `--fps` off `motion/render.py` unless the human asks for an override. Where another
   instruction names 60 fps, the saved rate wins. VSCO is the piano unless the human explicitly
@@ -211,7 +212,7 @@ Each engine has a self-test that needs no project file (README "Self-tests"):
 
 ## Skills
 
-- `mediatime` in `.claude/skills/mediatime/` (`SKILL.md`): the kickoff, and adding a medium to a
+- `begin` in `.claude/skills/begin/` (`SKILL.md`): the kickoff, and adding a medium to a
   project that has one.
 - `brand` in `.claude/skills/brand/` (`SKILL.md`, `BRAND.template.md`, `check.py`): writes
   `BRAND.md` with the human, generates `design.json` and the HANDBOOK "Brand" section. Check the

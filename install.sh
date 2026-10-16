@@ -34,7 +34,7 @@ captures/, outputs/ and downloaded sample libraries (music/samples/) are not cop
             to an administrator
   --setup   run <project-dir>/setup.sh after copying (after system-deps.sh) and exit with its status
   --fps N --piano vsco|salamander  save the video's frame rate (1-120) and piano library in
-            project.json with ./configure.sh (both together). Without them /mediatime asks.
+            project.json with ./configure.sh (both together). Without them /begin asks.
 
 Without --force the install stops, writing nothing, if any file it would write already exists.
 EOF
@@ -220,7 +220,7 @@ cat <<EOF
 Next steps (open a new terminal first if uv or Homebrew was just installed, so they are on PATH):
   1. cd $DEST
   2. claude
-  3. type /mediatime: Claude checks the machine, asks which medium (video, blog post or both) and
-     the rest (HUMAN.md describes what to expect; a Gemini API key is needed only for a narrated
+  3. type /begin: Claude checks the machine, asks which medium (video, blog post or both) and
+     the rest (HUMAN.md has the short version; a Gemini API key is needed only for a narrated
      voice, generated b-roll and the listening judge)
 EOF

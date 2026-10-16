@@ -16,7 +16,8 @@ REQUIRED = (
     "guides/capture.md",
     "guides/blog.md",
     "guides/video.md",
-    "claude-skills/mediatime/SKILL.md",
+    "claude-skills/begin/SKILL.md",
+    ".claude/skills/install/SKILL.md",
 )
 MODULE_ROOTS = tuple(KIT / p for p in ("fixtures/web", "fixtures/tui/src", "post/src", "edit", "motion", "music"))
 SCRIPT_DIRS = tuple(KIT / p for p in ("", "edit", "motion", "music", "narration", "post", "fixtures/web", "fixtures/tui"))
@@ -30,6 +31,7 @@ STALE = re.compile(
 README_MAP = {
     "What you make": ["The stack"],
     "How the kit is used": [],
+    "For the human": [],
     "Requirements": [],
     "Setup": ["Install into a project", "System packages", "Self-tests", "Running on macOS", "Sharing a project"],
     "The team": ["Rules that make the team work", "Good briefs"],
@@ -365,11 +367,22 @@ def test_fences_name_a_language() -> None:
     assert not problems, "\n".join(problems)
 
 
-def test_mediatime_skill_frontmatter() -> None:
-    text = (KIT / "claude-skills/mediatime/SKILL.md").read_text()
-    front = text.split("---", 2)[1]
-    assert re.search(r"^name: mediatime$", front, re.MULTILINE), front
+def check_skill_frontmatter(path: str, name: str, triggers: tuple[str, ...]) -> None:
+    front = (KIT / path).read_text().split("---", 2)[1]
+    assert re.search(rf"^name: {name}$", front, re.MULTILINE), front
     description = re.search(r"^description: (.+)$", front, re.MULTILINE)
     assert description, front
-    for trigger in ("/mediatime", "let's make a video", "write a blog post", "start the project"):
+    for trigger in triggers:
         assert trigger in description[1], f"description lacks {trigger!r}"
+
+
+def test_begin_skill_frontmatter() -> None:
+    check_skill_frontmatter(
+        "claude-skills/begin/SKILL.md", "begin", ("/begin", "let's make a video", "write a blog post", "start the project")
+    )
+
+
+def test_install_skill_frontmatter() -> None:
+    check_skill_frontmatter(
+        ".claude/skills/install/SKILL.md", "install", ("/install", "install the kit", "set up a project", "new project")
+    )

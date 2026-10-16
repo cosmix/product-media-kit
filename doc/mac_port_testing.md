@@ -78,7 +78,7 @@ set) and:
   Menlo`, and `fallback fonts` ok;
 - the "Brand" section shows `ok BRAND.md` or `WARN BRAND.md optional: run the brand skill in
   Claude Code to create it`, and no MISSING;
-- the "Claude Code skills" section is ok for `brand`, `narration` and `mediatime`;
+- the "Claude Code skills" section is ok for `brand`, `narration` and `begin`;
 - every Python environment synced, `post` included (look for wheel or build errors in the
   `./setup.sh` output);
 - `--for blog` prints no "GPU (OpenGL)", "Sample libraries" or "Whisper model" section.

@@ -44,7 +44,7 @@ step "install the kit into $P"
 
 step "check the install"
 need CLAUDE.md
-need .claude/skills/mediatime/SKILL.md
+need .claude/skills/begin/SKILL.md
 need guides/capture.md
 grep -q "\"slug\": \"$SLUG\"" "$P/project.json" || { echo "project.json lacks slug $SLUG" >&2; exit 1; }
 for d in doc tests captures outputs; do

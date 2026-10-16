@@ -141,7 +141,7 @@ a new section) goes to the tier that succeeded.
 
 ## The workflow
 
-Phase 0 is the `/mediatime` kickoff in `README.md` "Kickoff": the machine check, the frame rate
+Phase 0 is the `/begin` kickoff in `README.md` "Kickoff": the machine check, the frame rate
 and piano saved in `project.json`, the interview, the Gemini key, the brand skill, `NOTES.md` and
 `rates.json`. It ends by sending the lead here.
 
@@ -267,7 +267,7 @@ informed; cancel it when the work settles.
 ### A reusable plan
 
 1. Read the product's docs; list the features and the claims you'll make; verify each claim.
-2. Run the `/mediatime` kickoff: media, setup, interview, key, brand skill (`BRAND.md` and
+2. Run the `/begin` kickoff: media, setup, interview, key, brand skill (`BRAND.md` and
    `brand/` in, `design.json` and the HANDBOOK "Brand" section out), `NOTES.md`. With narration or
    b-roll, `rates.json`.
 3. Write the script as short sections. With narration: ask the tone, let the human choose among

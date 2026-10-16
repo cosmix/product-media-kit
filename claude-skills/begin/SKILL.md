@@ -1,15 +1,15 @@
 ---
-name: mediatime
-description: Kick off a product media project, or add a medium to one. Asks which media to make (a video, a blog post or both), saves a video's frame rate and piano with configure.sh, checks the machine with setup.sh, interviews the human, sets up the Gemini key and the brand, and writes project.json, NOTES.md, rates.json and the reuse inventory before Phase 1. Use on "/mediatime", "let's make a video", "write a blog post", "let's write the post", "start the project", on the first session of a project, and when the human asks for the other medium ("now a blog post too", "make a video from this post").
+name: begin
+description: Begin a product media project in the project folder, or add a medium to one. Confirms or asks which media to make (a video, a blog post or both), keeps what /install saved (frame rate, piano), checks the machine with setup.sh, interviews the human, sets up the Gemini key and the brand, and writes project.json, NOTES.md, rates.json and the reuse inventory before Phase 1. Use on "/begin", "begin", "let's make a video", "write a blog post", "let's write the post", "start the project", on the first session of a project, and when the human asks for the other medium ("now a blog post too", "make a video from this post").
 ---
 
-# Mediatime
+# Begin
 
-The kickoff. Run it in the first session of a project (no `NOTES.md`, or `media` empty in
-`project.json`) whatever the human said first, and again whenever the human asks for a medium the
-project does not have yet. You are the lead. README "Kickoff" and "Reuse between media" give the
-reasons; this file gives the steps. Do them in order and skip any question the human or the
-records already answered.
+The kickoff. Run it in the first session of a project (no `NOTES.md`) whatever the human said
+first, and again whenever the human asks for a medium the project does not have yet. You are the
+lead. `/install` (run from the kit folder) has already copied the kit and normally saved `media`,
+`fps` and `piano`; README "Kickoff" and "Reuse between media" give the reasons, this file gives the
+steps. Do them in order and skip any question the human or the records already answered.
 
 ## 1. Read what exists
 
@@ -26,20 +26,22 @@ outputs/, outputs/blog/        rendered and built deliverables
 claims.md, scenarios.md (absent in a video with no captures), BRAND.md, design.json, rates.json, HANDBOOK.md
 ```
 
-`project.json` missing means the project was not made by `install.sh`: tell the human to run
-`./install.sh <this folder> --force` from the kit and stop. Note the media already made and the
-artefacts each left; step 7 needs them.
+`project.json` missing means the kit was not installed here: tell the human to run `/install` from
+the kit folder (or `./install.sh <this folder> --force` there) and stop. Note the media already
+made and the artefacts each left; step 7 needs them.
 
 ## 2. Which media
 
-Ask what to make: a video, a blog post, or both. For both, ask which comes first; the second
-reuses what the first produced. When the project already has a medium, ask only whether to add
-the other. Out of scope from here on: a medium not chosen gets no question, no check, no role.
+When `media` is set and there is no `NOTES.md`, confirm it in one line ("A video, then a blog post,
+as chosen at install?") instead of asking. Otherwise ask what to make: a video, a blog post, or
+both. For both, ask which comes first; the second reuses what the first produced. When the project
+already has a medium and the human asks for more, ask only whether to add the other. Out of scope
+from here on: a medium not chosen gets no question, no check, no role.
 
 ## 3. Video choices, then check the machine
 
-With a video, ask these together, before any download or render. Answers already saved in
-`project.json` (`fps`, `piano`) stand; reuse them without asking.
+With a video whose `fps` or `piano` is absent from `project.json` (`/install` was skipped, or a
+video is being added), ask these together, before any download or render. Saved answers stand.
 
 - **Frame rate**: suggest 30 fps; any whole number from 1 to 120. It applies to the captures,
   motion graphics and the master.
@@ -50,28 +52,25 @@ With a video, ask these together, before any download or render. Answers already
   the video description; 1.2 GB more to download. Never select or download Salamander without
   that explicit choice.
 
-Save them before the setup run: `./configure.sh --fps <N> --piano <vsco|salamander>`. A video
-without music saves `--piano vsco`. If the human asks you to decide, save 30 fps and VSCO. Record
-the choices in `NOTES.md` (step 7). `project.json` is the source of truth for both from here on:
-where another instruction names 60 fps, the saved rate wins. To change them later, rerun
-`./configure.sh` (it keeps `slug` and `media`), then `./setup.sh` for a new piano, and rerender
-what the change touches.
+Save them with `./configure.sh --fps <N> --piano <vsco|salamander>`; a video without music saves
+`--piano vsco`, and "you decide" saves 30 fps and VSCO. Record the choices in `NOTES.md` (step 7).
+`project.json` is the source of truth for both from here on: where another instruction names 60
+fps, the saved rate wins. To change them later, rerun `./configure.sh` (it keeps `slug` and
+`media`), then `./setup.sh` for a new piano, and rerender what the change touches.
 
-Then, with `<media>` as `video`, `blog` or `both`:
+Then, with `<media>` as `video`, `blog` or `both`, run `./setup.sh --check --for <media>`. Only
+when it reports MISSING, or a medium is being added, run `./setup.sh --for <media>` (with
+`--no-samples` when the video has no music or the human is unsure) and repeat the check until the
+summary shows `0 MISSING`. WARN lines are optional; explain one only when it matters for this
+project (README "Setup" lists what each affects). A video without captures ignores the Chromium,
+tmux and terminal fonts WARNs ("web/terminal captures only").
 
-1. Run `./setup.sh --check --for <media>`.
-2. Run `./setup.sh --for <media>`, with `--no-samples` when the video has no music or the human is
-   unsure (rerun without the flag later to fetch the samples).
-3. `setup.sh` needs no administrator rights and neither do you. Never run sudo and never try to
-   install a system package (ffmpeg, Mesa, fonts, a command-line tool) yourself, and do not ask
-   the human for `!` commands. If a system dependency is MISSING, stop and ask the human to run
-   `./system-deps.sh` in a separate terminal outside Claude Code (`./system-deps.sh --for blog`
-   for a blog-only project), or to give an administrator the output of
-   `./system-deps.sh --dry-run`. When they say it is done, rerun `./setup.sh --check --for <media>`.
-4. Repeat until the summary shows `0 MISSING`. WARN lines are optional; explain one only when it
-   matters for this project (README "Setup" lists what each affects; for a post, ffmpeg matters
-   only when it has clips). A video without captures ignores the Chromium, tmux and terminal
-   fonts WARNs ("web/terminal captures only").
+`setup.sh` needs no administrator rights and neither do you. Never run sudo and never try to
+install a system package (ffmpeg, Mesa, fonts, a command-line tool) yourself, and do not ask the
+human for `!` commands. If a system dependency is MISSING, stop and ask the human to run
+`./system-deps.sh` in a separate terminal outside Claude Code (`./system-deps.sh --for blog` for a
+blog-only project), or to give an administrator the output of `./system-deps.sh --dry-run`. When
+they say it is done, rerun the check.
 
 ## 4. The interview
 
@@ -132,13 +131,13 @@ capture. Ask whether to recapture everything for both media or pin `VIEWPORT = (
 ## 5. The Gemini key
 
 Narration, generated b-roll and the listening judge need `GEMINI_API_KEY`. When one of them is
-wanted and `./setup.sh --check` shows the key as not set:
+wanted and `./setup.sh --check` shows the key as not set (`/install` may have covered it already):
 
 1. Tell the human to create a key at https://aistudio.google.com/apikey with billing on: the free
    tier allows 10 voice requests a day, which runs out during voice auditions.
 2. Tell them to add `export GEMINI_API_KEY=<key>` to their shell profile (`~/.zshrc` on macOS,
-   `~/.bashrc` on most Linux machines), then quit, open a new terminal and start `claude` in the
-   project folder again.
+   `~/.bashrc` on most Linux machines), then quit, open a new terminal, start `claude` in the
+   project folder again and type `/begin`.
 3. Never ask them to paste the key into the chat.
 4. Tell them that narration and b-roll are billed per request and that you keep a running
    estimate in `COSTS.md`.
@@ -161,7 +160,7 @@ needs no key.
 
 All of these are lead-owned files; write them yourself with the Edit or Write tool.
 
-- **`project.json`**: set `media` to the chosen media in the agreed order (`["video", "blog"]`,
+- **`project.json`**: set or confirm `media` as the chosen media in the agreed order (`["video", "blog"]`,
   `["blog"]`, ...), keeping `slug` as `install.sh` wrote it and `fps` and `piano` as
   `./configure.sh` saved them. Adding a medium appends it. The capture engines and `setup.sh` read
   it for their defaults.
