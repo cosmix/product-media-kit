@@ -77,14 +77,15 @@ def test_archive_roundtrip_and_inflation(project: Path, tmp_path: Path) -> None:
     keep = ("narration/final/voice.wav", "broll/source.mp4", "music/out/soundtrack.wav",
             "motion/out/scene.mov", "brand/fonts/font.ttf", "fixtures/web/uv.lock", ".env.example",
             "outputs/final-video-v1.mp4", "outputs/blog/draft-video-v1.md",
-            "captures/web/settings/clip.mp4", "captures/web/manifest.json")
+            "captures/web/settings/clip.mp4", "captures/web/manifest.json",
+            "captures/web/credentials-dialog/page.png", "motion/scenes/credentials.py", "brand/launch.key")
     omit = ("music/samples/piano.wav", "music/.venv/bin/python", "fixtures/web/node_modules/bin",
             ".env", ".env.production", ".aws/credentials", ".envrc", "sub/.netrc", ".npmrc",
-            "brand/server.pem", "deploy/id.key", "deploy/credentials.json", "music/build/fine_tune.json",
+            "brand/server.pem", "deploy/id.key", "deploy/credentials.json", "deploy/id_ed25519", "music/build/fine_tune.json",
             "edit/build/words.json", "post/build/ledger.json", "captures/web-selftest/clip.mp4",
             "captures/tui-selftest/manifest.json", "edit/__pycache__/render.cpython-313.pyc")
     for name in keep + omit:
-        write(project, name)
+        write(project, name, "-----BEGIN PRIVATE KEY-----\nabc\n" if name == "deploy/id.key" else "asset")
     (project / "voice-link.wav").symlink_to(project / keep[0])
     output = export(project, tmp_path / "share.tar.gz")
     recipient = tmp_path / "recipient"

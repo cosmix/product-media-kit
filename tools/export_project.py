@@ -15,7 +15,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 OMIT_NAMES = {".git", ".venv", "venv", "node_modules", "__pycache__", ".pytest_cache",
               ".ruff_cache", ".mypy_cache", ".cache", ".aws", ".DS_Store", ".envrc", ".netrc", ".npmrc"}
-OMIT_GLOBS = ("*.pem", "*.key", "credentials*")  # key and credential files, matched against every path part
+# file names that hold secrets; a directory or a longer name like credentials.py is kept
+SECRET_NAMES = ("credentials", "credentials.json", "*.pem", "id_rsa", "id_ed25519")
 # project-relative paths, one glob per part; everything under them is omitted too
 OMIT_PATHS = {"music/samples", "music/build", "edit/build", "post/build", "captures/*-selftest",
               "brand/fonts/resolved.json", "brand/fonts/.local",
@@ -28,11 +29,26 @@ def under(rel, pattern):
     return len(rel.parts) >= n and Path(*rel.parts[:n]).match(pattern)
 
 
+def secret(path):
+    """A file that holds a secret: a known name, or a .key file whose first line opens a PEM block."""
+    if not path.is_file():
+        return False
+    if any(fnmatch.fnmatch(path.name, g) for g in SECRET_NAMES):
+        return True
+    if path.suffix != ".key":
+        return False
+    try:
+        with open(path, "rb") as f:
+            return f.readline().lstrip().startswith(b"-----BEGIN")
+    except OSError:
+        return False
+
+
 def omitted(rel):
     return (any(p in OMIT_NAMES or p == ".env" or
                 (p.startswith(".env.") and p not in (".env.example", ".env.template"))
                 for p in rel.parts) or
-            any(fnmatch.fnmatch(p, g) for p in rel.parts for g in OMIT_GLOBS) or rel.suffix in (".pyc", ".pyo") or
+            rel.suffix in (".pyc", ".pyo") or
             any(under(rel, p) for p in OMIT_PATHS))
 
 
@@ -43,11 +59,12 @@ def entries(root):
         for name in sorted(files + dirs):
             path = base / name
             rel = path.relative_to(root)
-            if omitted(rel):
+            if omitted(rel) or secret(path):
                 continue
             if path.is_symlink():
                 target = path.resolve()
-                if not target.is_relative_to(root) or omitted(target.relative_to(root)):
+                if (not target.is_relative_to(root) or omitted(target.relative_to(root))
+                        or secret(target)):
                     raise ValueError(f"{rel}: symlink points outside the exported project; "
                                      "copy the project asset into the project before exporting")
                 if not target.exists():

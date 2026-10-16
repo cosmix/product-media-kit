@@ -420,8 +420,10 @@ It omits what `inflate.sh` restores or a render rebuilds: Python environments, `
 caches, `music/samples/`, `music/build/`, `edit/build/`, `post/build/`, `captures/*-selftest/`,
 machine-specific font resolution (`brand/fonts/resolved.json`, `brand/fonts/.local/`), Git
 history and local credentials (`.env`, `.env.*` except `.env.example` and `.env.template`,
-`.envrc`, `.netrc`, `.npmrc`, `.aws/`, `*.pem`, `*.key`, `credentials*`). The archive path must lie outside the project and not exist yet. A symlink that points
-outside the project or nowhere stops the export: copy that asset into the project first. A
+`.envrc`, `.netrc`, `.npmrc`, `.aws/`, and the files `credentials`, `credentials.json`, `*.pem`,
+`id_rsa`, `id_ed25519` and any `*.key` whose first line starts with `-----BEGIN`). The archive
+path must lie outside the project and not exist yet. A symlink that points outside the project
+or nowhere stops the export: copy that asset into the project first. A
 project installed before `export.sh` existed takes the current kit with `./install.sh
 <project-dir> --force` first. The scripts run on Python 3, or on `uv` when `python3` is absent.
 

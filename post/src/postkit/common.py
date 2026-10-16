@@ -17,7 +17,9 @@ IMAGE_RE = re.compile(
 # Other ways a post names a file: an <img src>, a reference definition `[id]: target`, and front matter values.
 IMG_TAG_RE = re.compile(r"<img\b[^>]*?\bsrc\s*=\s*(?:\"(?P<dq>[^\"]*)\"|'(?P<sq>[^']*)')", re.IGNORECASE)
 REF_DEF_RE = re.compile(r"^ {0,3}\[[^\]]+\]:[ \t]*(?P<url><[^>\s]+>|\S+)", re.MULTILINE)
-FRONT_IMAGE_RE = re.compile(r"(?<![\w/.-])images/[^\s\"'<>,\]}]+")
+LINK_RE = re.compile(r"(?<!!)\[(?:[^\[\]]|\[[^\]]*\])*\]\((?P<url><[^>\s]+>|[^)\s]+)(?:\s+(?:\"[^\"]*\"|'[^']*'))?\)")
+ATTR_RE = re.compile(r"<[a-z][^>]*?\b(?:href|src)\s*=\s*(?:\"(?P<dq>[^\"]*)\"|'(?P<sq>[^']*)')", re.IGNORECASE)
+FRONT_IMAGE_RE = re.compile(r"(?<![\w/.-])(?:\./)?images/[^\s\"'<>,\]}]+")
 LEFTOVER_RE = re.compile(r"\]\(\s*<?shot:")  # a shot: link target, whatever the text around it looks like
 EXTERNAL = ("http://", "https://", "//", "data:")  # link targets that are not files of outputs/blog/
 FRONT_MATTER_RE = re.compile(r"\A---\r?\n.*?\r?\n---[ \t]*(?:\r?\n|\Z)", re.DOTALL)
@@ -89,6 +91,8 @@ def _post_urls(text: str) -> list[str]:
     """Every local-file candidate a post names: image links, <img src>, reference definitions, front matter."""
     urls = [link_target(m["url"]) for m in body_matches(IMAGE_RE, text)]
     urls += [m["dq"] if m["dq"] is not None else m["sq"] for m in body_matches(IMG_TAG_RE, text)]
+    urls += [link_target(m["url"]) for m in body_matches(LINK_RE, text)]
+    urls += [link_target(m["dq"] if m["dq"] is not None else m["sq"]) for m in body_matches(ATTR_RE, text)]
     urls += [link_target(m["url"]) for m in body_matches(REF_DEF_RE, text)]
     urls += FRONT_IMAGE_RE.findall(text[: front_matter_end(text)])
     return urls

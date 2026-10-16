@@ -27,6 +27,12 @@ def blog_with(tmp_path: Path, text: str) -> Path:
     "![a][ref]\n\n[ref]: <images/a.png> \"title\"\n",
     "---\nhero: images/a.png\n---\ntext\n",
     "---\nimages:\n  - 'images/a.png'\n---\ntext\n",
+    "---\nhero: ./images/a.png\n---\ntext\n",
+    "[full size](images/a.png)\n",
+    "[full size](<./images/a.png>)\n",
+    '<a href="images/a.png">full</a>\n',
+    '<video src="./images/a.png"></video>\n',
+    "<video><source src='images/a.png'></video>\n",
 ])
 def test_every_way_of_naming_an_image_counts(tmp_path: Path, text: str) -> None:
     blog = blog_with(tmp_path, text)
@@ -83,6 +89,8 @@ def test_add_rejects_a_fake_png_and_leaves_no_orphan(tmp_path: Path) -> None:
     Image.new("RGB", (8, 8)).save(jpeg, format="JPEG")
 
     for bad in (fake, jpeg):
-        with pytest.raises(AddError):
-            add(tmp_path, "web/intro/title", bad)
-        assert not (tmp_path / "captures" / "web" / "intro" / "title.png").exists()
+        with pytest.raises(AddError) as caught:
+            add(tmp_path, "video/intro/title", bad)
+        assert str(caught.value).count(f"{bad}:") == 1  # the message is not wrapped twice
+        assert not (tmp_path / "captures" / "video" / "intro" / "title.png").exists()
+    assert str(caught.value) == f"{jpeg}: not a PNG (named .png but the content is JPEG)"

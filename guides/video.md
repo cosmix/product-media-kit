@@ -1197,9 +1197,10 @@ ffmpeg -v error -y -f rawvideo -pix_fmt rgb24 -s 1920x1080 -r 60 -i - \
 For social media and messaging, `uv run render.py --share` (from `edit/`) transcodes the latest
 final master to `outputs/final-<slug>-vN-share.mp4`; `--revision vN` picks another. It keeps
 1920x1080, drops a higher frame rate to 30 fps (a master at 30 fps or less keeps its rate),
-and uses H.264 High Profile, Level 4.1, 8-bit 4:2:0 video at `-crf 21` with AAC-LC stereo audio at
-160 kb/s (a silent master stays silent) in an MP4 container, which Apple devices play. `-crf 21` sets visual quality rather than
-a fixed bitrate; `+faststart` moves the MP4 index to the front so web playback starts promptly.
+and uses H.264 High Profile, Level 4.1, 8-bit 4:2:0 video at `-crf 21` with AAC-LC stereo audio
+at 160 kb/s (a silent master stays silent) in an MP4 container, which Apple devices play.
+`-crf 21` sets visual quality rather than a fixed bitrate; `+faststart` moves the MP4 index to
+the front so web playback starts promptly.
 The command refuses to overwrite an existing share copy: remove it to regenerate. With no final
 master it stops and says so.
 

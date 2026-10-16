@@ -76,6 +76,8 @@ def _check_png(file: Path) -> None:
             img.verify()
             if img.format != "PNG":
                 raise AddError(f"{file}: not a PNG (named .png but the content is {img.format})")
+    except AddError:
+        raise
     except (OSError, ValueError, SyntaxError) as e:
         raise AddError(f"{file}: not a readable PNG: {e}") from e
 
