@@ -2,7 +2,7 @@
 
 The capture driver owns time: it calls `World.tick(t)` once per video frame, and every message
 the page receives must follow from that clock. A project subclasses World in
-fixtures/web/product.py (README.md, "Web capture"), sends every WebSocket message through
+fixtures/web/product.py (guides/capture.md, "Web capture"), sends every WebSocket message through
 `send()` so the director can wait until the page has received it, and overrides `set_scene` and
 `tick` to publish its fixture story.
 """
@@ -10,9 +10,10 @@ fixtures/web/product.py (README.md, "Web capture"), sends every WebSocket messag
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
+from itertools import pairwise
 
-EPOCH = datetime(2026, 1, 15, 9, 30, tzinfo=timezone.utc)   # default page wall clock at story second 0
+EPOCH = datetime(2026, 1, 15, 9, 30, tzinfo=UTC)   # default page wall clock at story second 0
 
 
 @dataclass(frozen=True)
@@ -27,7 +28,7 @@ class Clock:
         pts = self.points
         if t <= pts[0][0]:
             return pts[0][1]
-        for (t0, s0), (t1, s1) in zip(pts, pts[1:]):
+        for (t0, s0), (t1, s1) in pairwise(pts):
             if t <= t1:
                 return s0 + (s1 - s0) * (t - t0) / (t1 - t0)
         (t0, s0), (t1, s1) = pts[-2], pts[-1]
@@ -35,7 +36,7 @@ class Clock:
 
     def inverse(self, s: float) -> float | None:
         """First clip second at which story second `s` is reached."""
-        for (t0, s0), (t1, s1) in zip(self.points, self.points[1:]):
+        for (t0, s0), (t1, s1) in pairwise(self.points):
             if s0 <= s <= s1 and s1 > s0:
                 return t0 + (t1 - t0) * (s - s0) / (s1 - s0)
         (t0, s0), (t1, s1) = self.points[-2], self.points[-1]

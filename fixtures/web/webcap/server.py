@@ -1,7 +1,7 @@
 """Serving helpers for the project's mock server, and a live preview on the wall clock.
 
 The project's fixtures/web/product.py builds an aiohttp application around the product's real
-built frontend (README.md, "Web capture"); these helpers do the parts every mock shares.
+built frontend (guides/capture.md, "Web capture"); these helpers do the parts every mock shares.
 
     uv run python -m webcap.server --scene <name>    # live preview at http://127.0.0.1:7373/
 """
@@ -15,6 +15,8 @@ import time
 from pathlib import Path
 
 from aiohttp import web
+
+PORT = 7373  # where the mock serves and where capture pages load it; webcap.browser uses it too
 
 
 def require_env(name: str, what: str) -> Path:
@@ -31,6 +33,14 @@ def no_store(response: web.StreamResponse) -> web.StreamResponse:
     return response
 
 
+def _file_handler(path: Path):
+    """An aiohttp handler answering every request with the file at `path`."""
+    async def handler(_request: web.Request) -> web.FileResponse:
+        return web.FileResponse(path)
+
+    return handler
+
+
 def serve_dist(app: web.Application, dist: Path) -> None:
     """Serve a built single-page frontend: its sub-folders and top-level files as they are,
     every other path as index.html. Add the API routes before calling this."""
@@ -40,8 +50,8 @@ def serve_dist(app: web.Application, dist: Path) -> None:
         if entry.is_dir():
             app.router.add_static(f"/{entry.name}", entry)
         elif entry.name != "index.html":
-            app.router.add_get(f"/{entry.name}", lambda _r, p=entry: web.FileResponse(p))
-    app.router.add_get("/{tail:.*}", lambda _r: web.FileResponse(dist / "index.html"))
+            app.router.add_get(f"/{entry.name}", _file_handler(entry))
+    app.router.add_get("/{tail:.*}", _file_handler(dist / "index.html"))
 
 
 async def start(app: web.Application, port: int) -> web.AppRunner:
@@ -66,7 +76,7 @@ async def _serve(scene: str, port: int) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(description="Serve the mock in real time, for a look in a browser.")
     parser.add_argument("--scene", required=True, help="a scene name of product.World")
-    parser.add_argument("--port", type=int, default=7373)
+    parser.add_argument("--port", type=int, default=PORT)
     args = parser.parse_args()
     asyncio.run(_serve(args.scene, args.port))
 

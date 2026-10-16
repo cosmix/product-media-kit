@@ -48,9 +48,9 @@ class Style:
         if self.strike:
             codes.append("9")
         if self.fg:
-            codes.append("38;2;%d;%d;%d" % self.fg)
+            codes.append("38;2;{:d};{:d};{:d}".format(*self.fg))
         if self.bg:
-            codes.append("48;2;%d;%d;%d" % self.bg)
+            codes.append("48;2;{:d};{:d};{:d}".format(*self.bg))
         return "\x1b[" + ";".join(codes) + "m"
 
 
@@ -108,7 +108,7 @@ RUST_KEYWORDS = {
     "self", "Self", "async", "await", "for", "in", "mod", "const", "move", "where",
 }
 RUST_VALUES = {"Some", "None", "Ok", "Err", "true", "false"}
-TOKEN = re.compile(r'"[^"]*"|//.*$|#\[[^\]]*\]|[A-Za-z_][A-Za-z0-9_]*!?|\d+|\s+|.', re.M)
+TOKEN = re.compile(r'"[^"]*"|//.*$|#\[[^\]]*\]|[A-Za-z_][A-Za-z0-9_]*!?|\d+|\s+|.', re.MULTILINE)
 
 
 def highlight_rust(code: str, bg: RGB | None = None) -> Line:
@@ -120,9 +120,7 @@ def highlight_rust(code: str, bg: RGB | None = None) -> Line:
             fg = STRING
         elif token.startswith("//"):
             fg = (106, 153, 85)
-        elif token.startswith("#["):
-            fg = MACRO
-        elif token.endswith("!"):
+        elif token.startswith("#[") or token.endswith("!"):
             fg = MACRO
         elif token in RUST_KEYWORDS:
             fg = KEYWORD

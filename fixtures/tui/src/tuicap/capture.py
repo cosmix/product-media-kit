@@ -8,8 +8,8 @@ import re
 import select
 import sys
 import time
+from collections.abc import Callable
 from pathlib import Path
-from typing import Callable
 
 import ptyprocess
 from wcwidth import wcswidth

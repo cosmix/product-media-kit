@@ -37,7 +37,7 @@ def tmux_server(socket: str, tmpdir: Path, env: dict[str, str],
     base = ["tmux", "-L", socket] + (["-f", str(conf)] if conf else [])
 
     def tmux(*args: str) -> str:
-        return subprocess.run([*base, *args], env=env, capture_output=True, text=True).stdout.strip()
+        return subprocess.run([*base, *args], check=False, env=env, capture_output=True, text=True).stdout.strip()
 
     tmux("kill-server")
     try:

@@ -9,7 +9,7 @@ import re
 import shutil
 import subprocess
 import sys
-from functools import lru_cache
+from functools import cache, lru_cache
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[4]
@@ -19,10 +19,10 @@ FONT_KEYS = {"regular", "bold", "italic", "bold_italic", "mono", "weights", "fam
 FONT_EXT = (".ttf", ".otf", ".ttc")  # a font role ending so is a path, anything else a family name
 RESOLVED = ROOT / "brand" / "fonts" / "resolved.json"  # tools/fonts.py: role key -> font file
 LOGO_KEYS = ("on_dark", "on_light")  # the logo for a dark ground, the logo for a light ground
+OBJECT_KEYS = ("fonts", "colors", "logo", "fonts.weights")  # keys whose value must be a JSON object
 COLORS = {"background": "#000000", "text": "#ffffff", "secondary": "#a0a0a0", "accent": "#ffffff"}
-GRAIN = 0.022
-SYSTEM = {"sans": ("DejaVu Sans", "Helvetica.ttc", "DejaVuSans.ttf"),  # fc-match family, macOS, Linux file
-          "mono": ("DejaVu Sans Mono", "Menlo.ttc", "DejaVuSansMono.ttf")}
+FC_TIMEOUT = 10  # seconds
+SYSTEM = {"mono": ("DejaVu Sans Mono", "Menlo.ttc", "DejaVuSansMono.ttf")}  # fc-match family, macOS, Linux file
 
 
 def read() -> dict:
@@ -34,22 +34,45 @@ def read() -> dict:
     except json.JSONDecodeError as e:
         raise ValueError(f"{HELP}: not valid JSON: {e}") from e
     if not isinstance(data, dict):
-        raise ValueError(f"{HELP}: expected a JSON object at the top level, got {type(data).__name__}")
-    objects = ("fonts", "colors", "logo", "fonts.weights")
-    for key in objects:
+        raise ValueError(  # noqa: TRY004 - the documented error is ValueError
+            f"{HELP}: expected a JSON object at the top level, got {type(data).__name__}")
+    try:
+        check_objects(data)
+    except ValueError as e:
+        raise ValueError(f"{HELP}: {e}") from e
+    return data
+
+
+def check_objects(data: dict) -> None:
+    """ValueError naming the first of fonts, colors, logo and fonts.weights that is not an object."""
+    for key in OBJECT_KEYS:
         value = data
         for part in key.split("."):
             value = value.get(part, {}) if isinstance(value, dict) else {}
         if not isinstance(value, dict):
-            raise ValueError(f"{HELP}: {key} = {value!r}: expected an object")
-    return data
+            raise ValueError(f"{key} = {value!r}: expected an object")  # noqa: TRY004 - the documented error is ValueError
 
 
 @lru_cache(maxsize=1)
 def load() -> dict:
     data = read()
-    fonts, colors, grain = data.get("fonts", {}), data.get("colors", {}), data.get("grain", GRAIN)
-    logos = data.get("logo", {})
+    bad = validate(data)
+    if bad:
+        raise ValueError(f"{HELP}: {bad[0]}")
+    fonts, logos = data.get("fonts", {}), data.get("logo", {})
+    named = {k: v for k, v in font_roles(fonts).items() if not is_family(v)}
+    named.update({f"logo.{k}": v for k, v in logos.items()})
+    for key, rel in named.items():
+        if not (ROOT / str(rel)).is_file():
+            raise FileNotFoundError(f"{key} in {DESIGN_JSON} is {rel!r}, but {ROOT / str(rel)} does not exist")
+    return data
+
+
+def validate(data: dict) -> list[str]:
+    """Every problem in a parsed design.json, [] when it is valid (files are not checked);
+    ValueError when fonts, colors, logo or fonts.weights is not an object."""
+    check_objects(data)
+    fonts, colors, logos = data.get("fonts", {}), data.get("colors", {}), data.get("logo", {})
     bad = [f"unknown key {k}" for k in sorted(set(data) - {"fonts", "colors", "grain", "logo"})]
     bad += [f"unknown key fonts.{k}" for k in sorted(set(fonts) - FONT_KEYS)]
     family = fonts.get("family", "x")
@@ -59,18 +82,13 @@ def load() -> dict:
             if not isinstance(v, str) or not v.strip()]
     bad += [f"colors.{k} = {v!r}: expected one of {', '.join(COLORS)} as #rrggbb" for k, v in colors.items()
             if k not in COLORS or not re.fullmatch(r"#[0-9a-fA-F]{6}", str(v))]
-    bad += [] if isinstance(grain, (int, float)) and grain >= 0 else [f"grain = {grain!r}: expected a number >= 0"]
+    grain = data.get("grain", 0)
+    if isinstance(grain, bool) or not isinstance(grain, (int, float)) or grain < 0:
+        bad.append(f"grain = {grain!r}: expected a number >= 0")
     bad += [f"unknown key logo.{k}" for k in sorted(set(logos) - set(LOGO_KEYS))]
     bad += [f"logo.{k} = {v!r}: expected an .svg or .png path" for k, v in logos.items()
             if not str(v).lower().endswith((".svg", ".png"))]
-    if bad:
-        raise ValueError(f"{HELP}: {bad[0]}")
-    named = {k: v for k, v in font_roles(fonts).items() if not is_family(v)}
-    named.update({f"logo.{k}": v for k, v in logos.items()})
-    for key, rel in named.items():
-        if not (ROOT / str(rel)).is_file():
-            raise FileNotFoundError(f"{key} in {DESIGN_JSON} is {rel!r}, but {ROOT / str(rel)} does not exist")
-    return data
+    return bad
 
 
 def is_family(value) -> bool:
@@ -113,52 +131,26 @@ def color(name: str) -> str:
     return load().get("colors", {}).get(name, COLORS[name])
 
 
-def grain() -> float:
-    return float(load().get("grain", GRAIN))
-
-
-def font(weight: int = 400, italic: bool = False) -> str:
-    """An exact `weights` entry, else `bold` from 600, else `regular`, else the system sans;
-    italic first tries `bold_italic` (from 600), then `italic`."""
-    roles, bold = font_roles(load().get("fonts", {})), weight >= 600
-    chain = ["fonts.bold_italic" if bold else None, "fonts.italic"] if italic else []
-    chain += [f"fonts.weights.{weight}", "fonts.bold" if bold else None, "fonts.regular"]
-    key = next((k for k in chain if k in roles), None)
-    return font_path(key, roles[key]) if key else system("sans")
-
-
-def luminance(hexstr: str) -> float:
-    """WCAG relative luminance of a #rrggbb colour, 0 (black) to 1 (white)."""
-    c = [int(hexstr[i:i + 2], 16) / 255 for i in (1, 3, 5)]
-    r, g, b = [v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4 for v in c]
-    return 0.2126 * r + 0.7152 * g + 0.0722 * b
-
-
-def logo(variant: str | None = None) -> Path:
-    """The logo file: `on_dark` or `on_light`, else the other one. Without a variant the
-    background colour picks: `on_dark` when light ink contrasts more with it (luminance < 0.179)."""
-    if variant not in (None, *LOGO_KEYS):
-        raise ValueError(f"logo variant {variant!r}: expected one of {', '.join(LOGO_KEYS)}")
-    variant = variant or ("on_dark" if luminance(color("background")) < 0.179 else "on_light")
-    logos = load().get("logo", {})
-    path = logos.get(variant) or logos.get(next(k for k in LOGO_KEYS if k != variant))
-    if not path:
-        raise FileNotFoundError(f"no logo in {DESIGN_JSON}: name logo.on_dark or logo.on_light "
-                                "(README.md, \"Brand\")")
-    return ROOT / path
-
-
 def mono() -> str:
     value = font_roles(load().get("fonts", {})).get("fonts.mono")
     return font_path("fonts.mono", value) if value else system("mono")
 
 
-@lru_cache(maxsize=None)
+def fc_match(family: str) -> str:
+    """The file fontconfig picks for a family; "" when it fails or times out."""
+    try:
+        return subprocess.run(["fc-match", "-f", "%{file}", family], check=False, capture_output=True,
+                              text=True, timeout=FC_TIMEOUT).stdout
+    except subprocess.TimeoutExpired:
+        return ""
+
+
+@cache
 def system(kind: str) -> str:
     family, mac, linux = SYSTEM[kind]
     paths = [f"/System/Library/Fonts/{mac}"] if sys.platform == "darwin" else []
     if sys.platform != "darwin" and shutil.which("fc-match"):
-        paths.append(subprocess.run(["fc-match", "-f", "%{file}", family], capture_output=True, text=True).stdout)
+        paths.append(fc_match(family))
     paths += [f"/usr/share/fonts/{d}/{linux}" for d in ("truetype/dejavu", "TTF", "dejavu")]
     path = next((p for p in paths if p and Path(p).is_file()), None)
     if path is None:

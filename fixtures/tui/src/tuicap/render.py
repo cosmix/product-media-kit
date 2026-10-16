@@ -1,33 +1,20 @@
-"""Replay a recorded byte stream through pyte and render 60 fps frames with skia."""
+"""Replay a recorded byte stream through pyte and render stills and short clips with skia."""
 
 from __future__ import annotations
 
-import subprocess
-import sys
 from dataclasses import dataclass
 from pathlib import Path
+from typing import ClassVar
 
 import pyte
 import skia
 from wcwidth import wcwidth
 
 from . import design, palette
+from .encode import PROFILES, encoder, fps_for, gif_from_webm, uses_mp4, webm_from_mp4
+from .fonts import emoji_font, fallback_fonts
 from .glyphs import Procedural
 
-# Glyphs the terminal font lacks, in order of preference; a missing file is skipped.
-if sys.platform == "darwin":
-    FALLBACK_FONTS = ["/System/Library/Fonts/Menlo.ttc", "/System/Library/Fonts/Apple Symbols.ttf"]
-    EMOJI_FONT = "/System/Library/Fonts/Apple Color Emoji.ttc"
-else:
-    FALLBACK_FONTS = [
-        "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf",
-        "/usr/share/fonts/truetype/noto/NotoSansSymbols2-Regular.ttf",
-        "/usr/share/fonts/truetype/noto/NotoSansSymbols-Regular.ttf",
-        "/usr/share/fonts/truetype/noto/NotoSansMath-Regular.ttf",
-    ]
-    EMOJI_FONT = "/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf"
-
-FPS = 60
 CELL_W = 28  # px at 2x; the font size makes one advance fill a cell
 CELL_H = 58
 PAD = 48  # 24 px at 1x
@@ -56,7 +43,7 @@ class VtScreen(pyte.Screen):
 
 
 class VtStream(pyte.ByteStream):
-    csi = {**pyte.ByteStream.csi, "S": "scroll_up", "T": "scroll_down"}
+    csi: ClassVar[dict[str, str]] = {**pyte.ByteStream.csi, "S": "scroll_up", "T": "scroll_down"}
 
 
 @dataclass
@@ -90,8 +77,9 @@ class Fonts:
             return font
 
         self.variants = {(b, i): load(mono, b, i) for b in (False, True) for i in (False, True)}
-        self.fallbacks = [load(p) for p in FALLBACK_FONTS if Path(p).is_file()]
-        self.emoji = load(EMOJI_FONT) if Path(EMOJI_FONT).is_file() else None
+        self.fallbacks = [load(p) for p in fallback_fonts() if Path(p).is_file()]
+        emoji = emoji_font()
+        self.emoji = load(emoji) if emoji and Path(emoji).is_file() else None
         metrics = self.variants[(False, False)].getMetrics()
         self.baseline = (CELL_H - (metrics.fDescent - metrics.fAscent)) / 2 - metrics.fAscent
         self._choice: dict[tuple[str, bool, bool], tuple[skia.Font, bool]] = {}
@@ -116,6 +104,7 @@ class TerminalRenderer:
     def __init__(self, geometry: Geometry):
         self.geo = geometry
         self.width, self.height = geometry.size
+        self.bg, self.fg = palette.bg(), palette.fg()  # design.json is read here, not at import
         self.fonts = Fonts()
         self.proc = Procedural(CELL_W, CELL_H)
         self.surface = skia.Surface.MakeRaster(
@@ -135,10 +124,9 @@ class TerminalRenderer:
     def cell_origin(self, x: int, y: int) -> tuple[float, float]:
         return PAD + x * CELL_W, PAD + y * CELL_H
 
-    @staticmethod
-    def colors(char: pyte.screens.Char) -> tuple[str, str]:
-        fg = palette.resolve(char.fg, palette.FG)
-        bg = palette.resolve(char.bg, palette.BG)
+    def colors(self, char: pyte.screens.Char) -> tuple[str, str]:
+        fg = palette.resolve(char.fg, self.fg)
+        bg = palette.resolve(char.bg, self.bg)
         if char.reverse:
             fg, bg = bg, fg
         return fg, bg
@@ -185,12 +173,12 @@ class TerminalRenderer:
 
     def render_base(self, buffer: list[list[pyte.screens.Char]]) -> None:
         canvas = self.surface.getCanvas()
-        canvas.clear(skia.Color(*palette.rgb(palette.BG)))
+        canvas.clear(skia.Color(*palette.rgb(self.bg)))
         for y, row in enumerate(buffer):
             x = 0
             while x < len(row):
                 _, bg = self.colors(row[x])
-                if bg == palette.BG:
+                if bg == self.bg:
                     x += 1
                     continue
                 start = x
@@ -205,18 +193,21 @@ class TerminalRenderer:
                 self.draw_glyph(canvas, char, x, y, fg)
         self.base = self.surface.makeImageSnapshot()
 
+    def draw_cursor(self, buffer, cursor: tuple[int, int], alpha: float) -> None:
+        x, y = cursor
+        if alpha > 0.01 and 0 <= x < self.geo.cols and 0 <= y < self.geo.rows:
+            canvas = self.surface.getCanvas()
+            char = buffer[y][x]
+            _, bg = self.colors(char)
+            ox, oy = self.cell_origin(x, y)
+            canvas.drawRect(skia.Rect.MakeXYWH(ox, oy, CELL_W, CELL_H),
+                            self.paint(self.fg, alpha * 0.92))
+            self.draw_glyph(canvas, char, x, y, bg, alpha)
+
     def frame(self, buffer, cursor: tuple[int, int] | None, cursor_alpha: float) -> bytes:
-        canvas = self.surface.getCanvas()
-        canvas.drawImage(self.base, 0, 0)
-        if cursor is not None and cursor_alpha > 0.01:
-            x, y = cursor
-            if 0 <= x < self.geo.cols and 0 <= y < self.geo.rows:
-                char = buffer[y][x]
-                fg, bg = self.colors(char)
-                ox, oy = self.cell_origin(x, y)
-                canvas.drawRect(skia.Rect.MakeXYWH(ox, oy, CELL_W, CELL_H),
-                                self.paint(palette.FG, cursor_alpha * 0.92))
-                self.draw_glyph(canvas, char, x, y, bg, cursor_alpha)
+        self.surface.getCanvas().drawImage(self.base, 0, 0)
+        if cursor is not None:
+            self.draw_cursor(buffer, cursor, cursor_alpha)
         return self.surface.makeImageSnapshot().tobytes()
 
     def still(self, path: Path) -> None:
@@ -239,19 +230,6 @@ def cursor_alpha(since_input: float) -> float:
     return ease((phase - 0.98) / 0.12)
 
 
-def encoder(path: Path, width: int, height: int) -> subprocess.Popen:
-    cmd = [
-        "ffmpeg", "-y", "-loglevel", "error",
-        "-f", "rawvideo", "-pix_fmt", "rgba", "-s", f"{width}x{height}", "-r", str(FPS),
-        "-i", "-",
-        "-vf", "scale=out_color_matrix=bt709:out_range=tv,format=yuv420p",
-        "-c:v", "libx264", "-preset", "slow", "-crf", "10", "-pix_fmt", "yuv420p",
-        "-color_primaries", "bt709", "-color_trc", "bt709", "-colorspace", "bt709",
-        "-r", str(FPS), "-fps_mode", "cfr", "-movflags", "+faststart", str(path),
-    ]
-    return subprocess.Popen(cmd, stdin=subprocess.PIPE)
-
-
 @dataclass
 class Recording:
     """Output bytes with times (s) relative to video start; negative = pre-roll."""
@@ -264,49 +242,124 @@ class Recording:
     show_cursor: bool = True
 
 
-def render_recording(rec: Recording, out_mp4: Path, still_png: Path, still_t: float) -> dict:
+def _snapshot(screen: VtScreen, rec: Recording) -> list[list[pyte.screens.Char]]:
+    """A dense copy of pyte's sparse per-row buffer."""
+    return [[screen.buffer[y][x] for x in range(rec.cols)] for y in range(rec.rows)]
+
+
+def _atomic_png(renderer: TerminalRenderer, png: Path) -> None:
+    png.parent.mkdir(parents=True, exist_ok=True)
+    tmp = png.with_name(f"{png.stem}.tmp.png")
+    renderer.still(tmp)
+    tmp.replace(png)
+
+
+def render_still(rec: Recording, png: Path, t: float) -> tuple[int, int]:
+    """Render the terminal as it looks at time t to a PNG; returns (width, height)."""
     geo = Geometry(rec.cols, rec.rows)
     renderer = TerminalRenderer(geo)
     screen = VtScreen(rec.cols, rec.rows)
     stream = VtStream(screen)
+    for when, data in sorted(rec.events, key=lambda e: e[0]):
+        if when > t:
+            break
+        stream.feed(data)
+    buffer = _snapshot(screen, rec)
+    renderer.render_base(buffer)
+    if rec.show_cursor and not screen.cursor.hidden:
+        renderer.draw_cursor(buffer, (screen.cursor.x, screen.cursor.y), 1.0)
+    _atomic_png(renderer, png)
+    return geo.size
+
+
+def cell_box(geometry: Geometry, row0: int, col0: int, row1: int, col1: int) -> list[int]:
+    """[x, y, w, h] image pixels of the half-open cell range rows row0..row1, cols col0..col1."""
+    if not (0 <= row0 < row1 <= geometry.rows and 0 <= col0 < col1 <= geometry.cols):
+        raise ValueError(f"cell range rows {row0}..{row1}, cols {col0}..{col1} is empty or outside "
+                         f"the {geometry.cols}x{geometry.rows} grid")
+    return [PAD + col0 * CELL_W, PAD + row0 * CELL_H, (col1 - col0) * CELL_W, (row1 - row0) * CELL_H]
+
+
+
+
+def _write_frames(rec: Recording, renderer: TerminalRenderer, sink, frames: int, fps: int) -> None:
+    """Replay the recording and write `frames` raw frames to `sink`, re-rendering only on change."""
+    screen = VtScreen(rec.cols, rec.rows)
+    stream = VtStream(screen)
     events = sorted(rec.events, key=lambda e: e[0])
-    proc = encoder(out_mp4, *geo.size)
-    frames = round(rec.duration * FPS)
-    still_frame = min(frames - 1, round(still_t * FPS))
-    idx = 0
-    last_bytes = None
-    last_key = None
-    buffer = None
+    idx, last, last_key, buffer = 0, b"", None, None
     for n in range(frames):
-        t = n / FPS
+        t = n / fps
         changed = buffer is None
         while idx < len(events) and events[idx][0] <= t:
             stream.feed(events[idx][1])
             idx += 1
             changed = True
         if changed:
-            buffer = [[screen.buffer[y][x] for x in range(rec.cols)] for y in range(rec.rows)]
+            buffer = _snapshot(screen, rec)
             renderer.render_base(buffer)
         visible = rec.show_cursor and not screen.cursor.hidden
         cursor = (screen.cursor.x, screen.cursor.y) if visible else None
         past = [i for i in rec.inputs if i <= t]
         alpha = cursor_alpha(t - past[-1] if past else t) if visible else 0.0
-        key = (changed, cursor, round(alpha, 3))
-        if last_bytes is None or changed or key != last_key:
-            last_bytes = renderer.frame(buffer, cursor, alpha)
-        last_key = (False, cursor, round(alpha, 3))
-        proc.stdin.write(last_bytes)
-        if n == still_frame:
-            renderer.still(still_png)
-    proc.stdin.close()
-    if proc.wait() != 0:
-        raise RuntimeError(f"ffmpeg failed for {out_mp4}")
+        key = (cursor, round(alpha, 3))
+        if changed or key != last_key:
+            last = renderer.frame(buffer, cursor, alpha)
+        last_key = key
+        sink.write(last)
+
+
+def _encode(rec: Recording, renderer: TerminalRenderer, tmp: dict[str, Path], profile: str,
+            draft: bool, frames: int) -> None:
+    """Write the profile's files under their temporary names (keys are the extensions)."""
+    proc = encoder(tmp["mp4" if uses_mp4(profile) else "webm"], *renderer.geo.size, profile, draft)
+    try:
+        _write_frames(rec, renderer, proc.stdin, frames, fps_for(profile))
+        proc.stdin.close()
+        if proc.wait() != 0:
+            raise RuntimeError("ffmpeg failed while encoding the clip")
+    except BaseException:
+        if proc.poll() is None:
+            proc.kill()
+        proc.wait()
+        raise
+    if profile == "both":
+        webm_from_mp4(tmp["mp4"], tmp["webm"])
+    if profile != "video":
+        gif_from_webm(tmp["webm"], tmp["gif"])
+
+
+def render_recording(rec: Recording, out_dir: Path, label: str, profile: str = "blog",
+                     draft: bool = False) -> dict:
+    """Write the profile's files for <label> into out_dir and return the clip manifest entry
+    fields (paths relative to out_dir). blog: .webm (30 fps), .gif, .png poster (the last frame).
+    video: .mp4 (60 fps) and .png; `file` is then the poster. both: the mp4, plus the WebM
+    and GIF derived from it. `draft` encodes the mp4 fast at crf 23. A failure leaves no partial files."""
+    if profile not in PROFILES:
+        raise ValueError(f"profile {profile!r}: expected one of {', '.join(PROFILES)}")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    geo = Geometry(rec.cols, rec.rows)
+    renderer = TerminalRenderer(geo)
+    exts = {"video": ("mp4",), "blog": ("webm", "gif"), "both": ("mp4", "webm", "gif")}[profile]
+    tmp = {ext: out_dir / f"{label}.tmp.{ext}" for ext in exts}
+    fps = fps_for(profile)
+    frames = max(1, round(rec.duration * fps))
+    try:
+        _encode(rec, renderer, tmp, profile, draft, frames)
+        for ext, path in tmp.items():
+            path.replace(out_dir / f"{label}.{ext}")
+    except BaseException:
+        for path in tmp.values():
+            path.unlink(missing_ok=True)
+        raise
+    _atomic_png(renderer, out_dir / f"{label}.png")
     width, height = geo.size
-    return {
-        "size": [width, height],
-        "fps": FPS,
-        "duration": round(frames / FPS, 3),
-        "grid": f"{rec.cols}x{rec.rows}",
-        "cell_px": [CELL_W, CELL_H],
-        "padding_px": PAD,
-    }
+    entry = {"kind": "clip", "file": f"{label}.gif" if "gif" in exts else f"{label}.png",
+             "poster": f"{label}.png", "width": width, "height": height, "scale": 2.0,
+             "duration": round(frames / fps, 3), "boxes": {}}
+    if "webm" in exts:
+        entry["webm"] = f"{label}.webm"
+    if "mp4" in exts:
+        entry.update({"video": f"{label}.mp4", "fps": fps, "grid": f"{rec.cols}x{rec.rows}",
+                      "cell_px": [CELL_W, CELL_H], "padding_px": PAD})
+    return entry

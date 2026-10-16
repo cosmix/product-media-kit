@@ -19,8 +19,23 @@ from collections.abc import Callable
 from dataclasses import dataclass
 
 from webcap.ansi import (
-    ADD_BG, AGENT, BORDER, DEL_BG, DIM, ERROR, SHIMMER, SUCCESS, USER_BG,
-    Line, Style, encode, highlight_rust, pad, seg, width, wrap,
+    ADD_BG,
+    AGENT,
+    BORDER,
+    DEL_BG,
+    DIM,
+    ERROR,
+    SHIMMER,
+    SUCCESS,
+    USER_BG,
+    Line,
+    Style,
+    encode,
+    highlight_rust,
+    pad,
+    seg,
+    width,
+    wrap,
 )
 
 Block = Callable[[int], list[Line]]

@@ -7,3 +7,9 @@ dependencies = [
     "numpy>=2.5.3",
     "playwright>=1.63.0",
 ]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.17.1",
+]

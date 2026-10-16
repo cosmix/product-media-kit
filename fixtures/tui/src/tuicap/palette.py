@@ -1,6 +1,8 @@
 """Terminal palette: background and foreground from the project's design.json, the standard
 ANSI colours softened. TRUECOLOR maps colours a program hard-codes (lower-case hex) onto the
-palette, and the project fills it from fixtures/tui/product.py (README.md, "TUI capture")."""
+palette, and the project fills it from fixtures/tui/product.py (guides/capture.md, "TUI capture").
+design.json is read when bg() or fg() first runs, never at import, so a bad file surfaces
+where the caller can report it."""
 
 from __future__ import annotations
 
@@ -8,11 +10,21 @@ import pyte.graphics
 
 from . import design
 
-BG = design.color("background").lstrip("#").lower()
-FG = design.color("text").lstrip("#").lower()
+BRIGHT_WHITE = 15
 
-# ANSI 0-15
-ANSI16 = [
+
+def bg() -> str:
+    """The terminal background, six lower-case hex digits."""
+    return design.color("background").lstrip("#").lower()
+
+
+def fg() -> str:
+    """The terminal's default text colour, six lower-case hex digits."""
+    return design.color("text").lstrip("#").lower()
+
+
+# ANSI 0-14; bright white (15) is the foreground, see ansi()
+ANSI = [
     "1e1e1e",  # black
     "ef7a6e",  # red
     "7fd49a",  # green
@@ -28,7 +40,6 @@ ANSI16 = [
     "9cc5f5",
     "d6b6f6",
     "92dde6",
-    FG,  # bright white -> foreground (ratatui White)
 ]
 
 _NAMES = ["black", "red", "green", "brown", "blue", "magenta", "cyan", "white"]
@@ -45,13 +56,18 @@ def rgb(hexval: str) -> tuple[int, int, int]:
     return int(hexval[0:2], 16), int(hexval[2:4], 16), int(hexval[4:6], 16)
 
 
+def ansi(index: int) -> str:
+    """Palette hex of ANSI colour 0-15; bright white is the foreground (ratatui White)."""
+    return fg() if index == BRIGHT_WHITE else ANSI[index]
+
+
 def resolve(color: str, default: str) -> str:
     """pyte colour (name, xterm hex, or truecolour hex) -> palette hex."""
     if color == "default":
         return default
     if color in _BY_NAME:
-        return ANSI16[_BY_NAME[color]]
+        return ansi(_BY_NAME[color])
     color = color.lower()
     if color in _XTERM16:
-        return ANSI16[_XTERM16[color]]
+        return ansi(_XTERM16[color])
     return TRUECOLOR.get(color, color)
