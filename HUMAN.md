@@ -26,20 +26,19 @@ Optional: your brand guidelines (`BRAND.md`) and logo and fonts (`brand/`), at a
 
 2. Only for a narrated voice, generated b-roll or the listening judge: create a Gemini API key at
    <https://aistudio.google.com/apikey> and enable billing (the free tier allows 10 voice requests
-   a day). Use is billed per request; Claude keeps an estimate in `COSTS.md`. Add this line to your
-   shell profile (`~/.zshrc` on macOS, `~/.bashrc` on most Linux machines) and open a new terminal
-   before starting Claude. Never paste the key into the chat.
-
-   ```bash
-   export GEMINI_API_KEY=<your key>
-   ```
-
+   a day). Use is billed per request; Claude keeps an estimate in `COSTS.md`. You pass it when you
+   start Claude in the project (step 4). Never paste the key into the chat.
 3. Get this kit folder, open a terminal in it, run `claude` and type `/install`. Claude asks a few
    questions, installs, and tells you the one command to run in a second terminal: the system
    packages need your password.
-4. When Claude says so, run `cd <project> && claude` and type `/begin`.
+4. When Claude says so, start it in the project and type `/begin`:
 
-Coming back later: start `claude` in the project folder; it picks up where it stopped.
+   ```bash
+   cd <project> && claude                              # without a Gemini key
+   cd <project> && GEMINI_API_KEY=<your key> claude    # with one
+   ```
+
+Coming back later: start `claude` in the project folder the same way; it picks up where it stopped.
 
 Everything else (review, where the files land, sharing, updating, troubleshooting): ask Claude, or
 see README.md, "For the human".

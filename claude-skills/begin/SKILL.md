@@ -135,9 +135,8 @@ wanted and `./setup.sh --check` shows the key as not set (`/install` may have co
 
 1. Tell the human to create a key at https://aistudio.google.com/apikey with billing on: the free
    tier allows 10 voice requests a day, which runs out during voice auditions.
-2. Tell them to add `export GEMINI_API_KEY=<key>` to their shell profile (`~/.zshrc` on macOS,
-   `~/.bashrc` on most Linux machines), then quit, open a new terminal, start `claude` in the
-   project folder again and type `/begin`.
+2. Tell them to quit and start Claude in the project folder again with the key in front, then
+   type `/begin`: `GEMINI_API_KEY=<key> claude`.
 3. Never ask them to paste the key into the chat.
 4. Tell them that narration and b-roll are billed per request and that you keep a running
    estimate in `COSTS.md`.

@@ -97,20 +97,17 @@ captures only").
 ## 7. The Gemini key
 
 Needed for narration, generated b-roll and the listening judge; a post needs none. When one is
-likely and `[ -n "$GEMINI_API_KEY" ]` is false (never print the key):
-
-1. Tell the human to create a key at https://aistudio.google.com/apikey with billing on: the free
-   tier allows 10 voice requests a day, which runs out during voice auditions.
-2. Tell them to add `export GEMINI_API_KEY=<key>` to `~/.zshrc` (macOS) or `~/.bashrc` (most
-   Linux machines) and to open a new terminal before starting `claude` in the project.
-3. Never ask them to paste the key into the chat.
+likely, tell the human to create a key at https://aistudio.google.com/apikey with billing on (the
+free tier allows 10 voice requests a day, which runs out during voice auditions) and to pass it
+when starting `claude` in the project (step 8). Never ask them to paste the key into the chat.
 
 ## 8. Hand over
 
-End with exactly what to type, in a new terminal when the key or a tool was just installed:
+End with exactly what to type, in a new terminal when a tool was just installed:
 
 ```bash
-cd <dir> && claude
+cd <dir> && claude                         # without a Gemini key
+cd <dir> && GEMINI_API_KEY=<key> claude    # with one
 ```
 
 then `/begin`. Name the media and the saved choices in one line so the human can correct them.

@@ -366,7 +366,7 @@ check_api_key() {
   if [ -n "${GEMINI_API_KEY:-}${GOOGLE_API_KEY:-}" ]; then
     status ok "Gemini API key"
   else
-    status WARN "Gemini API key" "optional: only a narrated voice (TTS), generated b-roll (tools/genvideo.py) and the listening judge (tools/listen.py) call Gemini; without it the lead reviews audio with ffmpeg measurements only. For them, create a key at https://aistudio.google.com/apikey and: export GEMINI_API_KEY=...  Enable billing: the free tier allows only 10 TTS requests a day."
+    status WARN "Gemini API key" "optional: only a narrated voice (TTS), generated b-roll (tools/genvideo.py) and the listening judge (tools/listen.py) call Gemini; without it the lead reviews audio with ffmpeg measurements only. For them, create a key at https://aistudio.google.com/apikey and start Claude Code with it: GEMINI_API_KEY=... claude  Enable billing: the free tier allows only 10 TTS requests a day."
   fi
 }
 

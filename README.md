@@ -340,11 +340,11 @@ this update before it can be exported.
    family and where to put its files ([Fonts by family](#fonts-by-family)).
 
 3. If the video uses a narrated voice, generated b-roll or the listening judge, the human puts
-   the API key in their shell profile and restarts `claude` (`tts.py` also accepts
+   the API key in front of `claude` when starting it in the project (`tts.py` also accepts
    `GOOGLE_API_KEY`). The key is never pasted into the chat:
 
    ```bash
-   export GEMINI_API_KEY=<your key>   # https://aistudio.google.com/apikey
+   GEMINI_API_KEY=<your key> claude   # https://aistudio.google.com/apikey
    ```
 
 4. Claude Code settings. The lead works with named teammates that message each other, a feature
@@ -632,8 +632,9 @@ The `install` skill (`.claude/skills/install/SKILL.md` in the kit, not copied in
 5. Run `./setup.sh --check --for <media>` then `./setup.sh --for <media>` (`--no-samples` without
    music) until `0 MISSING`.
 6. The Gemini key, when narration, b-roll or the listening judge is likely and the key is unset:
-   the human creates it with billing on, exports it in the shell profile and opens a new terminal.
-7. Hand over: `cd <dir> && claude`, then `/begin`.
+   the human creates it with billing on.
+7. Hand over: `cd <dir> && claude` (`cd <dir> && GEMINI_API_KEY=<key> claude` with the key), then
+   `/begin`.
 
 The `begin` skill (`.claude/skills/begin/SKILL.md` in the project) runs the kickoff:
 
