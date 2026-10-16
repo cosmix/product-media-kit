@@ -1,0 +1,29 @@
+[project]
+name = "postkit"
+version = "0.1.0"
+description = "Assembles a blog post from captures: image treatment, markdown, checks"
+requires-python = ">=3.13"
+dependencies = [
+    "pillow>=12.3.0",
+]
+
+[project.scripts]
+postkit = "postkit.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.12.22,<0.13.0"]
+build-backend = "uv_build"
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+    "ruff>=0.17.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff.lint.per-file-ignores]
+# Frozen contract file: its imports group postkit with the third-party PIL, which ruff's isort
+# classifies as first-party because src/postkit exists.
+"tests/test_contracts.py" = ["I001"]
