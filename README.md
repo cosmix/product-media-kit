@@ -1,3 +1,5 @@
+![Product Media Kit](doc/images/hero.png)
+
 # Product Media Kit
 
 Humans start with [HUMAN.md](HUMAN.md); agents start with `CLAUDE.md`.
