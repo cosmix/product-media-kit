@@ -1,4 +1,4 @@
-![Product Media Kit](doc/images/hero.png)
+![Product Media Kit](doc/images/hero.webp)
 
 # Product Media Kit
 
