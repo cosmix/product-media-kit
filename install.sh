@@ -104,7 +104,7 @@ list_files() {
   local -a prune=(-name .venv -o -name __pycache__ -o -name .pytest_cache -o -name .ruff_cache -o -name .mypy_cache
                   -o -name out -o -name build -o -name .git -o -path ./music/samples)
   for p in "$@"; do prune+=(-o -path "$p"); done
-  (cd "$dir" && find . \( "${prune[@]}" \) -prune -o \( -type f -o -type l \) -print | LC_ALL=C sort)
+  (cd "$dir" && find . \( ${prune[@]+"${prune[@]}"} \) -prune -o \( -type f -o -type l \) -print | LC_ALL=C sort)
 }
 
 # development files and the kit's own project files do not belong in a project folder

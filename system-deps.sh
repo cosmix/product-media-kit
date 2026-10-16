@@ -119,6 +119,12 @@ if [ "$MGR" = apt ]; then NEED_DEPS=1; fi
 if [ "$MGR" = dnf ] && [ "$FOR" != blog ]; then
   case " $PKGS " in *" ffmpeg "*) NEED_FUSION=1; PKGS="$(sed 's/\(^\| \)ffmpeg\( \|$\)/ /; s/^ *//; s/ *$//' <<<"$PKGS")" ;; esac
 fi
+# An ffmpeg that is already there (ffmpeg-free from a blog setup) may lack libx264: swap it for Fusion's.
+# The encoder list is captured first, because grep -q closing the pipe would fail ffmpeg under pipefail.
+if [ "$MGR" = dnf ] && [ "$FOR" != blog ] && [ "$NEED_FUSION" = 0 ] && command -v ffmpeg >/dev/null 2>&1; then
+  ENCODERS="$(ffmpeg -hide_banner -encoders 2>/dev/null || true)"
+  case "$ENCODERS" in *libx264*) ;; *) NEED_FUSION=1 ;; esac
+fi
 
 if [ "$MGR" = none ]; then
   echo "system-deps.sh: no supported package manager (apt-get or dnf) found." >&2

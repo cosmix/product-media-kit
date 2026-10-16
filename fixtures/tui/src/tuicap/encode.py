@@ -64,10 +64,12 @@ def _ffmpeg(*args: str) -> None:
 
 def webm_from_mp4(mp4: Path, webm: Path, fps: int) -> None:
     """The blog WebM from the video MP4 (recorded at `fps`): BLOG_FPS, resampled only when `fps`
-    differs, at half the pixel size."""
+    differs, at half the pixel size, tagged bt709 like the web capture's derived WebM."""
     resample = "" if fps == BLOG_FPS else f"fps={BLOG_FPS},"
-    _ffmpeg("-i", str(mp4), "-vf", f"{resample}scale=trunc(iw/4)*2:trunc(ih/4)*2:flags=lanczos",
-            "-c:v", "libvpx-vp9", "-b:v", "0", "-crf", "32", "-pix_fmt", "yuv420p", str(webm))
+    graph = f"{resample}scale=trunc(iw/4)*2:trunc(ih/4)*2:flags=lanczos,{TO_BT709}"
+    _ffmpeg("-i", str(mp4), "-vf", graph, "-c:v", "libvpx-vp9", "-b:v", "0", "-crf", "32",
+            "-pix_fmt", "yuv420p", "-colorspace", "bt709", "-color_primaries", "bt709",
+            "-color_trc", "bt709", "-color_range", "tv", str(webm))
 
 
 def gif_from_webm(webm: Path, gif: Path) -> None:

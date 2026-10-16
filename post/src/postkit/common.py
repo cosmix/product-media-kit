@@ -14,6 +14,10 @@ NAME_RE = re.compile(r"[a-z0-9]+(?:-[a-z0-9]+)*")  # slugs, scenarios and labels
 IMAGE_RE = re.compile(
     r"!\[(?P<alt>(?:[^\[\]]|\[[^\]]*\])*)\]\((?P<url>[^)\s]+)(?P<title>\s+(?:\"[^\"]*\"|'[^']*'))?\)"
 )
+# Other ways a post names a file: an <img src>, a reference definition `[id]: target`, and front matter values.
+IMG_TAG_RE = re.compile(r"<img\b[^>]*?\bsrc\s*=\s*(?:\"(?P<dq>[^\"]*)\"|'(?P<sq>[^']*)')", re.IGNORECASE)
+REF_DEF_RE = re.compile(r"^ {0,3}\[[^\]]+\]:[ \t]*(?P<url><[^>\s]+>|\S+)", re.MULTILINE)
+FRONT_IMAGE_RE = re.compile(r"(?<![\w/.-])images/[^\s\"'<>,\]}]+")
 LEFTOVER_RE = re.compile(r"\]\(\s*<?shot:")  # a shot: link target, whatever the text around it looks like
 EXTERNAL = ("http://", "https://", "//", "data:")  # link targets that are not files of outputs/blog/
 FRONT_MATTER_RE = re.compile(r"\A---\r?\n.*?\r?\n---[ \t]*(?:\r?\n|\Z)", re.DOTALL)
@@ -76,16 +80,29 @@ def read_slug(root: Path) -> str:
     return slug
 
 
+def link_target(url: str) -> str:
+    """A markdown link target without the angle brackets that may wrap it."""
+    return url.removeprefix("<").removesuffix(">")
+
+
+def _post_urls(text: str) -> list[str]:
+    """Every local-file candidate a post names: image links, <img src>, reference definitions, front matter."""
+    urls = [link_target(m["url"]) for m in body_matches(IMAGE_RE, text)]
+    urls += [m["dq"] if m["dq"] is not None else m["sq"] for m in body_matches(IMG_TAG_RE, text)]
+    urls += [link_target(m["url"]) for m in body_matches(REF_DEF_RE, text)]
+    urls += FRONT_IMAGE_RE.findall(text[: front_matter_end(text)])
+    return urls
+
+
 def referenced_images(blog: Path) -> set[Path]:
-    """The resolved local files every .md in `blog` links; a linked GIF counts its WebM sibling too."""
+    """The resolved local files every .md in `blog` names; a linked GIF counts its WebM sibling too."""
     linked: set[Path] = set()
     for md in sorted(blog.glob("*.md")):
         try:
             text = md.read_text(encoding="utf-8")
         except (OSError, ValueError):
             continue  # an unreadable post is reported by check; it references nothing we can tell
-        for m in body_matches(IMAGE_RE, text):
-            url = m["url"].removeprefix("<")
+        for url in _post_urls(text):
             if url.lower().startswith(EXTERNAL) or url.startswith("/"):
                 continue
             path = (md.parent / unquote(url.partition("#")[0].partition("?")[0])).resolve()
@@ -101,11 +118,12 @@ def part_path(target: Path) -> Path:
 
 
 def remove_part_files(directory: Path) -> None:
-    """Delete the part files (see `part_path`) a killed run left anywhere under `directory`."""
-    if directory.is_dir():
-        for part in directory.rglob(".*.part"):
-            if part.is_file():
-                part.unlink()
+    """Delete the part files (see `part_path`) a killed run left where postkit writes: the posts in
+    `directory` and the images in its images/ folder. Other hidden .part files are the user's."""
+    candidates = [*directory.glob(".*.md.part"), *(directory / "images").glob(".*.part")]
+    for part in candidates:
+        if part.is_file():
+            part.unlink()
 
 
 def write_atomic(target: Path, data: bytes) -> None:

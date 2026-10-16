@@ -2,6 +2,7 @@
 (no downloads)."""
 
 import json
+import os
 import shutil
 import subprocess
 import tarfile
@@ -9,7 +10,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
-from tools.export_project import export
+from tools.export_project import _publish, export
 from tools.project_settings import configure, read
 
 KIT = Path(__file__).resolve().parents[1]
@@ -78,7 +79,8 @@ def test_archive_roundtrip_and_inflation(project: Path, tmp_path: Path) -> None:
             "outputs/final-video-v1.mp4", "outputs/blog/draft-video-v1.md",
             "captures/web/settings/clip.mp4", "captures/web/manifest.json")
     omit = ("music/samples/piano.wav", "music/.venv/bin/python", "fixtures/web/node_modules/bin",
-            ".env", ".env.production", ".aws/credentials", "music/build/fine_tune.json",
+            ".env", ".env.production", ".aws/credentials", ".envrc", "sub/.netrc", ".npmrc",
+            "brand/server.pem", "deploy/id.key", "deploy/credentials.json", "music/build/fine_tune.json",
             "edit/build/words.json", "post/build/ledger.json", "captures/web-selftest/clip.mp4",
             "captures/tui-selftest/manifest.json", "edit/__pycache__/render.cpython-313.pyc")
     for name in keep + omit:
@@ -101,6 +103,42 @@ def test_archive_roundtrip_and_inflation(project: Path, tmp_path: Path) -> None:
     assert (restored / "calls").read_text().splitlines() == ["restored"]
     with pytest.raises(ValueError, match="already exists"):
         export(project, output)
+
+
+def test_archive_is_readable_and_publishes_without_hard_links(project: Path, tmp_path: Path) -> None:
+    for name in SHARE_SCRIPTS:
+        write(project, name)
+    with patch("tools.export_project.os.link", side_effect=OSError("no hard links here")):
+        output = export(project, tmp_path / "share.tar.gz")
+        with pytest.raises(ValueError, match="already exists"):
+            _publish(write(tmp_path, "temp.part"), output)
+    umask = os.umask(0)
+    os.umask(umask)
+    assert output.stat().st_mode & 0o777 == 0o666 & ~umask
+    assert not list(tmp_path.glob(".export-*"))
+
+
+def test_configure_repairs_a_bad_saved_fps(project: Path) -> None:
+    write(project, "project.json", '{"slug": "x", "fps": 500, "piano": "vsco"}\n')
+    with pytest.raises(ValueError, match="fps must be"):
+        read(project)
+
+    assert configure(project, fps=24)["fps"] == 24
+    assert json.loads((project / "project.json").read_text())["slug"] == "x"
+
+
+def test_configure_refuses_a_bad_result_without_writing(project: Path) -> None:
+    text = '{"fps": 24, "piano": "organ"}\n'
+    write(project, "project.json", text)
+    with pytest.raises(ValueError, match="piano must be"):
+        configure(project, fps=25)
+
+    assert (project / "project.json").read_text() == text
+
+
+def test_interactive_fps_rejects_non_ascii_digits(project: Path) -> None:
+    with patch("sys.stdin.isatty", return_value=True), patch("builtins.input", side_effect=["\u00b2", "24", ""]):
+        assert configure(project) == {"fps": 24, "piano": "vsco"}
 
 
 def test_external_symlink_rejected(project: Path, tmp_path: Path) -> None:

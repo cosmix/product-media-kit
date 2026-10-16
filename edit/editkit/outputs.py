@@ -12,7 +12,7 @@ from pathlib import Path
 
 STAGES = ("draft", "final")
 SLUG = r"[a-z0-9]+(?:-[a-z0-9]+)*"
-_SLUG_RE = re.compile(rf"^{SLUG}$")
+_SLUG_RE = re.compile(SLUG)
 _REVISION_RE = re.compile(r"v([1-9][0-9]*)")
 
 
@@ -52,7 +52,7 @@ def output_path(directory: Path, slug: str, stage: str, ext: str, *, primary_ext
     `primary_ext`, 1 when none."""
     if stage not in STAGES:
         raise ValueError(f"stage must be one of {STAGES}, not {stage!r}")
-    if suffix is not None and not _SLUG_RE.match(suffix):
+    if suffix is not None and not _SLUG_RE.fullmatch(suffix):
         raise ValueError(f"invalid suffix {suffix!r}: lowercase letters, digits and single hyphens")
     if revision is not None and revision < 1:
         raise ValueError(f"revision must be 1 or more, not {revision}")
@@ -77,6 +77,6 @@ def read_slug(project_root: Path) -> str:
         slug = json.loads(path.read_text()).get("slug")
     except (json.JSONDecodeError, AttributeError) as e:
         raise SystemExit(f"{path} is not a JSON object: {e}") from e
-    if not isinstance(slug, str) or not _SLUG_RE.match(slug):
+    if not isinstance(slug, str) or not _SLUG_RE.fullmatch(slug):
         raise SystemExit(f"{path}: \"slug\" must match {SLUG} (lowercase words joined by hyphens), got {slug!r}")
     return slug

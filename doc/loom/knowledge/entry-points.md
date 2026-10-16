@@ -19,7 +19,7 @@ From each folder with `uv run`: `edit/render.py` (master, `--preview`, `--range`
 
 ## Project-root tools
 
-PEP 723 scripts run with `uv run` from the project root: `tools/fonts.py [--check]` (font resolution), `tools/listen.py` (listening judge), `tools/genvideo.py` (b-roll with Gemini Omni), `tools/costs.py` (prices `usage.jsonl` into `<project>/COSTS.md`), `tools/usage_log.py` (library). `claude-skills/brand/check.py [PROJECT_ROOT]` (installed as `.claude/skills/brand/check.py`) prints `ok`, `WARN`, `MISSING` and exits 1 on any `MISSING`; `claude-skills/narration/tts.py` renders speech; `claude-skills/mediatime/SKILL.md` is the kickoff.
+PEP 723 scripts run with `uv run` from the project root: `tools/fonts.py [--check]` (font resolution), `tools/listen.py` (listening judge), `tools/genvideo.py` (b-roll with Gemini Omni), `tools/costs.py` (prices `usage.jsonl` into `<project>/COSTS.md`), `tools/usage_log.py` (library). `claude-skills/brand/check.py [PROJECT_ROOT]` (install.sh copies it to `<project>/.claude/skills/brand/check.py`) prints `ok`, `WARN`, `MISSING` and exits 1 on any `MISSING`; `claude-skills/narration/tts.py` renders speech; `claude-skills/mediatime/SKILL.md` is the kickoff.
 
 ## Kit scripts
 

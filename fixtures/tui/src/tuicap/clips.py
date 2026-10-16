@@ -122,6 +122,21 @@ def render_stills(scenario: str, rec: Recording, stills: list[Still], out: Path)
     return entries
 
 
+def normalize_marks(marks) -> list[dict]:
+    """`marks` as [{"t", "event", "key"}], the web director's form: each mark is (t, event),
+    (t, event, key) or a dict with t and event and an optional key (default False)."""
+    out = []
+    for mark in marks:
+        if isinstance(mark, dict) and {"t", "event"} <= mark.keys():
+            t, event, key = mark["t"], mark["event"], mark.get("key", False)
+        elif isinstance(mark, (tuple, list)) and len(mark) in (2, 3):
+            t, event, key = (*mark, False)[:3]
+        else:
+            raise ValueError(f"mark {mark!r}: expected (t, event), (t, event, key) or a dict with t and event")
+        out.append({"t": t, "event": event, "key": bool(key)})
+    return out
+
+
 def render_clip(job: Job) -> dict:
     """Render a clip scenario in the job's profile; the manifest entry, paths relative to out."""
     info = render_recording(job.rec, job.out / job.scenario, "clip", job.profile, job.draft)
@@ -130,7 +145,7 @@ def render_clip(job: Job) -> dict:
         if key in entry:
             entry[key] = f"{job.scenario}/{entry[key]}"
     if "video" in entry:
-        entry["marks"] = job.marks
+        entry["marks"] = normalize_marks(job.marks)
     return entry
 
 

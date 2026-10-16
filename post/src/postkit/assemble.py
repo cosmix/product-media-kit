@@ -189,7 +189,7 @@ def _update_ledger(root: Path, written: list[Path]) -> list[Path]:
     another revision stays listed. Losing the ledger only means nothing is ever deleted.
     """
     blog = blog_dir(root)
-    inside = blog.resolve()
+    inside = (blog / "images").resolve()  # the ledger can only ever delete images
     now = {path.relative_to(blog).as_posix() for path in written}
     linked = referenced_images(blog)
     kept, removed = set(now), []

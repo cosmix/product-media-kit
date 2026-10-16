@@ -6,6 +6,7 @@ machine-specific font resolution, Git history and local credentials. ./inflate.s
 """
 
 import argparse
+import fnmatch
 import os
 import tarfile
 import tempfile
@@ -13,7 +14,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 OMIT_NAMES = {".git", ".venv", "venv", "node_modules", "__pycache__", ".pytest_cache",
-              ".ruff_cache", ".mypy_cache", ".cache", ".aws", ".DS_Store"}
+              ".ruff_cache", ".mypy_cache", ".cache", ".aws", ".DS_Store", ".envrc", ".netrc", ".npmrc"}
+OMIT_GLOBS = ("*.pem", "*.key", "credentials*")  # key and credential files, matched against every path part
 # project-relative paths, one glob per part; everything under them is omitted too
 OMIT_PATHS = {"music/samples", "music/build", "edit/build", "post/build", "captures/*-selftest",
               "brand/fonts/resolved.json", "brand/fonts/.local",
@@ -29,7 +31,8 @@ def under(rel, pattern):
 def omitted(rel):
     return (any(p in OMIT_NAMES or p == ".env" or
                 (p.startswith(".env.") and p not in (".env.example", ".env.template"))
-                for p in rel.parts) or rel.suffix in (".pyc", ".pyo") or
+                for p in rel.parts) or
+            any(fnmatch.fnmatch(p, g) for p in rel.parts for g in OMIT_GLOBS) or rel.suffix in (".pyc", ".pyo") or
             any(under(rel, p) for p in OMIT_PATHS))
 
 
@@ -52,6 +55,19 @@ def entries(root):
             elif not path.is_file() and not path.is_dir():
                 raise ValueError(f"{rel}: unsupported special file")
             yield path, rel
+
+
+def _publish(temporary, output):
+    """Move the finished archive to `output` without overwriting one created concurrently."""
+    umask = os.umask(0)
+    os.umask(umask)
+    os.chmod(temporary, 0o666 & ~umask)  # mkstemp creates 0600; a shared archive follows the umask
+    try:
+        os.link(temporary, output)
+    except OSError:  # no hard links on this filesystem: check, then replace (a narrow race remains)
+        if output.exists():
+            raise ValueError(f"{output} already exists; choose a new output path") from None
+        os.replace(temporary, output)
 
 
 def export(root, output):
@@ -78,8 +94,7 @@ def export(root, output):
                     return info
                 archive.add(path, arcname=str(Path(root.name) / rel), recursive=False,
                             filter=portable_link)
-        # Publish without overwriting an archive created concurrently.
-        os.link(temporary, output)
+        _publish(temporary, output)
     finally:
         Path(temporary).unlink(missing_ok=True)
     return output

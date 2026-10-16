@@ -2,8 +2,10 @@
 
 import json
 import os
+import re
 import shutil
 import subprocess
+import sys
 import time
 from pathlib import Path
 
@@ -137,6 +139,32 @@ def test_system_deps_default_lists_video_packages_when_apt() -> None:
     assert "Chromium's OS libraries" in proc.stdout
 
 
+def dnf_machine(tmp_path: Path, encoders: str) -> dict[str, str]:
+    """An environment with dnf and no apt-get whose ffmpeg lists ENCODERS, and every other tool present."""
+    bin_dir = tmp_path / "bin"
+    bin_dir.mkdir()
+    for tool in ("dirname", "uname", "sed", "awk", "cat"):
+        (bin_dir / tool).symlink_to(shutil.which(tool) or tool)
+    for tool in ("dnf", "curl", "tar", "rg", "tmux", "xz", "unzip", "uv"):
+        (bin_dir / tool).write_text("#!/bin/sh\n")
+    (bin_dir / "ffmpeg").write_text(f"#!/bin/sh\necho '{encoders}'\n")
+    for tool in ("dnf", "curl", "tar", "rg", "tmux", "xz", "unzip", "uv", "ffmpeg"):
+        (bin_dir / tool).chmod(0o755)
+    return {"PATH": str(bin_dir), "HOME": str(tmp_path)}
+
+
+@pytest.mark.skipif(sys.platform != "linux", reason="the dnf path is detected on Linux")
+@pytest.mark.parametrize(("encoders", "fusion"), [(" V..... libopenh264", True), (" V..... libx264", False)])
+def test_system_deps_dnf_swaps_an_ffmpeg_without_libx264(tmp_path: Path, encoders: str, fusion: bool) -> None:
+    proc = subprocess.run(
+        [BASH, str(KIT / "system-deps.sh"), "--dry-run", "--for", "video"],
+        check=False, capture_output=True, text=True, timeout=60, env=dnf_machine(tmp_path, encoders),
+    )
+
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert ("RPM Fusion" in proc.stdout) is fusion, proc.stdout
+
+
 def test_system_deps_rejects_unknown_medium() -> None:
     assert system_deps_dry_run("--for", "audio").returncode == 2
 
@@ -243,3 +271,26 @@ def test_setup_brand_newer_ignores_tools_fonts_output(tmp_path: Path) -> None:
 
     asset.write_text("changed\n")
     assert setup_brand_newer(root) == ["brand/fonts/Body-Regular.ttf"]
+
+
+def test_scripts_expand_arrays_in_a_form_bash_3_2_accepts() -> None:
+    """macOS bash 3.2 fails "${ARR[@]}" on an empty array under set -u; ${ARR[@]+"${ARR[@]}"} is safe."""
+    bare = re.compile(r'(?<!\+)"\$\{\w+\[@\]\}"')
+    scripts = [*KIT.glob("*.sh"), *(KIT / "tools").glob("*.sh")]
+    assert scripts
+    offenders = [f"{s.name}:{n}" for s in scripts for n, line in enumerate(s.read_text().splitlines(), 1)
+                 if bare.search(line)]
+
+    assert offenders == []
+
+
+def test_setup_samples_reports_a_malformed_project_json_instead_of_aborting(tmp_path: Path) -> None:
+    (tmp_path / "tools").mkdir()
+    for name in ("configure.sh", "tools/project_settings.py"):
+        shutil.copy2(KIT / name, tmp_path / name)
+    (tmp_path / "project.json").write_text("{not json")
+
+    proc = source_setup(tmp_path, "--for video --no-samples", "set -e; fetch_samples; echo reached-the-end")
+
+    assert "reached-the-end" in proc.stdout, proc.stdout + proc.stderr
+    assert "MISSING   project.json" in proc.stdout, proc.stdout

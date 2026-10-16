@@ -265,7 +265,8 @@ product's real theme.
 | `TRUECOLOR` | no          | `{hex: palette hex}`, both six lower-case hex digits without `#`, for colours the program hard-codes |
 | `NOTES`     | no          | `{scenario or "scenario/label": text}`, written to the manifest entry as `notes`                     |
 
-`marks` is a list of `{"t": seconds, "event": name, "key": bool}`, as the web director writes them.
+`marks` is a list of `(t, event)`, `(t, event, key)` or `{"t": seconds, "event": name, "key": bool}`;
+the manifest gets the dict form with `key` false unless given, as the web director writes them.
 
 **`Still(label, t, boxes={})`** (`tuicap.shots`) is one PNG at `<scenario>/<label>.png`: the
 screen as it is at `t` seconds into the recording (every output event at or before `t` is on

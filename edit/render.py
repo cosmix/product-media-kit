@@ -128,25 +128,40 @@ def require_real_assets() -> None:
 
 
 def _t(x: float) -> str:
-    """A time as a slug part: 12.5 -> 12p5."""
-    return f"{x:g}".replace(".", "p")
+    """A time as a slug part: 12.5 -> 12p5 (never an exponent)."""
+    return f"{x:.3f}".rstrip("0").rstrip(".").replace(".", "p")
+
+
+def has_audio(path: Path) -> bool:
+    """True when the file has an audio stream."""
+    r = subprocess.run(["ffprobe", "-v", "error", "-select_streams", "a:0", "-show_entries", "stream=codec_type",
+                        "-of", "csv=p=0", str(path)], capture_output=True, text=True, check=True)
+    return bool(r.stdout.strip())
 
 
 def share(slug: str, revision: int | None) -> None:
     """Transcode a final master to the share copy (guides/video.md, "The share copy")."""
     rev = revision or latest_revision(OUTPUTS, slug, "final", "mp4")
+    if rev is None:
+        sys.exit("no final master to transcode: render one with `uv run render.py`")
     src = OUTPUTS / f"final-{slug}-v{rev}.mp4"
-    if rev is None or not src.exists():
+    if not src.exists():
         sys.exit(f"no final master {src} to transcode: render one with `uv run render.py`")
     dst = output_path(OUTPUTS, slug, "final", "mp4", primary_ext="mp4", suffix="share", revision=rev)
     if dst.exists():
         sys.exit(f"{dst} exists: remove it to regenerate")
+    part = dst.with_name(dst.name + ".part")
     vf = ["-vf", "fps=30"] if probe(str(src)).fps > 30.5 else []
-    subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-stats", "-nostdin", "-n", "-i", str(src),
-                    "-map", "0:v:0", "-map", "0:a:0", "-map_metadata", "0", *vf,
-                    "-c:v", "libx264", "-preset", "slow", "-crf", "21",
-                    "-profile:v", "high", "-level:v", "4.1", "-pix_fmt", "yuv420p",
-                    "-c:a", "aac", "-b:a", "160k", "-movflags", "+faststart", str(dst)], check=True)
+    audio = ["-c:a", "aac", "-b:a", "160k"] if has_audio(src) else []
+    try:
+        subprocess.run(["ffmpeg", "-hide_banner", "-loglevel", "error", "-stats", "-nostdin", "-y", "-i", str(src),
+                        "-map", "0:v:0", "-map", "0:a:0?", "-map_metadata", "0", *vf,
+                        "-c:v", "libx264", "-preset", "slow", "-crf", "21",
+                        "-profile:v", "high", "-level:v", "4.1", "-pix_fmt", "yuv420p",
+                        *audio, "-movflags", "+faststart", "-f", "mp4", str(part)], check=True)
+        part.replace(dst)
+    finally:
+        part.unlink(missing_ok=True)
     print(f"wrote {dst}")
 
 
@@ -166,6 +181,8 @@ def main() -> None:
                     help="fast encode instead of x264 at crf 14 (NVENC or VideoToolbox when they work, else x264 veryfast)")
     ap.add_argument("--allow-placeholders", action="store_true", help="render even if an asset is missing")
     a = ap.parse_args()
+    if a.range and min(a.range) < 0:
+        ap.error("--range times must be 0 or more")
 
     slug = read_slug(assets.ROOT)
     if a.share:

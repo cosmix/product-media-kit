@@ -63,10 +63,21 @@ def _still(file: Path, stem: Path, shot_id: str, at: float | None) -> tuple[dict
     if at is not None:
         _frame(file, png, at)
     elif file.suffix.lower() == ".png":
+        _check_png(file)  # before the copy, so a bad file leaves nothing in captures/
         copy_atomic(file, png)
     else:
         raise AddError(f"{file}: not a PNG; give --at T for a frame or --from/--to for a segment")
     return _entry(shot_id, "still", "shots", f"{shot_id}.png", png, {}), [png]
+
+
+def _check_png(file: Path) -> None:
+    try:
+        with Image.open(file) as img:
+            img.verify()
+            if img.format != "PNG":
+                raise AddError(f"{file}: not a PNG (named .png but the content is {img.format})")
+    except (OSError, ValueError, SyntaxError) as e:
+        raise AddError(f"{file}: not a readable PNG: {e}") from e
 
 
 def _clip(file: Path, stem: Path, shot_id: str, start: float, end: float) -> tuple[dict, list[Path]]:

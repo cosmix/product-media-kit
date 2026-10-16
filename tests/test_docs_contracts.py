@@ -24,7 +24,7 @@ SHELL_SCRIPTS = ("setup.sh", "install.sh", "system-deps.sh", "inflate.sh")
 WRAPPERS = {"configure.sh": "tools/project_settings.py", "export.sh": "tools/export_project.py"}  # exec argparse
 PACKAGES = ("webcap", "tuicap", "postkit", "editkit")
 STALE = re.compile(
-    r"product-video-kit|product-blog-kit|Product (Video|Blog) Kit|edit/out/intro|post\.json|open_scene"
+    r"product-video-[k]it|product-blog-[k]it|Product (Video|Blog) [K]it|edit/out/[i]ntro|post\.[j]son|[o]pen_scene"
     r"|key_marks|STILL_T|\.postkit\.json"
 )
 README_MAP = {

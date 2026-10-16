@@ -125,6 +125,7 @@ def test_name_patterns_agree(name: str, ext: str) -> None:
     {"suffix": "share-"},
     {"suffix": "a_b"},
     {"suffix": ""},
+    {"suffix": "share\n"},
     {"revision": 0},
     {"revision": -1},
 ])
@@ -155,3 +156,9 @@ def test_output_path_creates_the_folder_in_both(tmp_path: Path) -> None:
         directory = tmp_path / module.__name__ / "outputs"
         module.output_path(directory, SLUG, "draft", "mp4", primary_ext="mp4")
         assert directory.is_dir(), module.__name__
+
+
+def test_a_slug_with_a_trailing_newline_is_rejected(tmp_path: Path) -> None:
+    (tmp_path / "project.json").write_text('{"slug": "acme\\n"}')
+    with pytest.raises(SystemExit):
+        EDIT.read_slug(tmp_path)

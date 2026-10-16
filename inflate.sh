@@ -18,4 +18,4 @@ for arg in "$@"; do
   esac
 done
 if [ "$SYSTEM" = 1 ]; then "$ROOT/system-deps.sh"; fi
-exec "$ROOT/setup.sh" "${OPTIONS[@]}"
+exec "$ROOT/setup.sh" ${OPTIONS[@]+"${OPTIONS[@]}"}

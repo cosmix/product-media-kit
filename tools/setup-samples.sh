@@ -62,7 +62,8 @@ fetch_samples() {
   section "Sample libraries"
   if [ "$CHECK" = 0 ] && [ "$WANT_SAMPLES" = 1 ]; then mkdir -p "$SAMPLES"; fi
   local piano
-  piano="$("$ROOT/configure.sh" --get piano)" || return 1
+  # a malformed project.json is reported in the summary, not an abort under set -e
+  piano="$("$ROOT/configure.sh" --get piano 2>&1)" || { status MISSING "project.json" "$piano"; return 0; }
   if [ "$piano" = salamander ]; then
     sample_set "Salamander piano" tar SalamanderGrandPianoV3_48khz24bit "1.2 GB" \
       "https://freepats.zenvoid.org/Piano/SalamanderGrandPiano/SalamanderGrandPianoV3+20161209_48khz24bit.tar.xz" \

@@ -24,6 +24,7 @@ from postkit.common import (
     blog_dir,
     body_matches,
     line_of,
+    link_target,
     read_slug,
     referenced_images,
 )
@@ -109,7 +110,7 @@ def _leftovers(text: str, name: str, reported: set[int]) -> list[Problem]:
 
 
 def _link_problems(m: re.Match[str], where: str, base: Path, blog: Path) -> list[Problem]:
-    url = m["url"]
+    url = link_target(m["url"])
     problems = [] if m["alt"].strip() else [Problem("ERROR", f"{where}: empty alt text")]
     if url.lower().startswith(EXTERNAL):
         return problems

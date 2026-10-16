@@ -73,7 +73,7 @@ def test_install_excludes_dev_tree(fake_kit: Path, tmp_path: Path) -> None:
         "slug": "demo-post",
         "media": [],
     }
-    assert not (dest / "post.json").exists()
+    assert not (dest / ("post" + ".json")).exists()
 
 
 def path_without_ffmpeg(tmp_path: Path) -> Path:

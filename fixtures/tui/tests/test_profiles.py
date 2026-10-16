@@ -121,7 +121,16 @@ def test_clip_entries_carry_the_clip_origin_marks_and_scenario_paths(tmp_path, m
     assert entry["origin"] == "clip" and entry["id"] == "s/clip"
     assert (entry["file"], entry["video"], entry["webm"], entry["poster"]) == (
         "s/clip.gif", "s/clip.mp4", "s/clip.webm", "s/clip.png")
-    assert entry["marks"] == [{"t": 0.0, "event": "x"}]
+    assert entry["marks"] == [{"t": 0.0, "event": "x", "key": False}]
+
+
+def test_marks_accept_tuples_and_dicts_and_default_key_to_false():
+    marks = clips.normalize_marks([(0.5, "a"), (1.0, "b", True), {"t": 2.0, "event": "c"},
+                                   {"t": 3.0, "event": "d", "key": True}])
+    assert marks == [{"t": 0.5, "event": "a", "key": False}, {"t": 1.0, "event": "b", "key": True},
+                     {"t": 2.0, "event": "c", "key": False}, {"t": 3.0, "event": "d", "key": True}]
+    with pytest.raises(ValueError, match="mark"):
+        clips.normalize_marks([(1.0,)])
 
 
 def test_annotate_prefers_the_entry_note_over_the_scenario_note():

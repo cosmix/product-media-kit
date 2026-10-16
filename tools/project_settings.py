@@ -6,6 +6,7 @@ Read by setup (sample libraries), the captures, motion, music and the edit; writ
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -20,16 +21,20 @@ def _saved(path):
     return data
 
 
-def read(root=ROOT):
-    """project.json under `root` with DEFAULTS for absent keys; ValueError for a bad fps or piano."""
-    path = Path(root) / "project.json"
-    settings = DEFAULTS | _saved(path)
+def _validated(path, settings):
+    """`settings` when its fps and piano are valid; ValueError naming `path` otherwise."""
     fps = settings["fps"]
     if type(fps) is not int or not 1 <= fps <= 120:
         raise ValueError(f"{path}: fps must be an integer from 1 to 120")
     if settings["piano"] not in ("vsco", "salamander"):
         raise ValueError(f"{path}: piano must be vsco or salamander")
     return settings
+
+
+def read(root=ROOT):
+    """project.json under `root` with DEFAULTS for absent keys; ValueError for a bad fps or piano."""
+    path = Path(root) / "project.json"
+    return _validated(path, DEFAULTS | _saved(path))
 
 
 def ask(prompt, default, valid):
@@ -42,12 +47,12 @@ def ask(prompt, default, valid):
 
 def configure(root, fps=None, piano=None):
     """Save `fps` and `piano` in root/project.json, keeping its other keys. A choice not given
-    keeps the saved one; one neither given nor saved is asked on a terminal, else ValueError."""
+    keeps the saved one; one neither given nor saved is asked on a terminal, else ValueError.
+    The merged result is validated before it is written, so a new value repairs a bad saved one."""
     path = root / "project.json"
     saved = _saved(path)
-    settings = read(root)
     if fps is None and piano is None and DEFAULTS.keys() <= saved.keys():
-        return settings
+        return read(root)
     fps = fps if fps is not None else saved.get("fps")
     piano = piano or saved.get("piano")
     if fps is None or piano is None:
@@ -56,13 +61,14 @@ def configure(root, fps=None, piano=None):
                              "./configure.sh --fps 30 --piano vsco (or salamander).")
         if fps is None:
             fps = int(ask("Frame rate (24, 25, 30, 50, 60, or another integer 1–120)",
-                          str(settings["fps"]), lambda s: s.isdigit() and 1 <= int(s) <= 120))
+                          str(DEFAULTS["fps"]), lambda s: re.fullmatch(r"[0-9]+", s) and 1 <= int(s) <= 120))
         if piano is None:
             piano = ask("Piano: vsco (CC0, no attribution) or salamander "
                         "(grand piano, requires on-screen CC BY 3.0 attribution)",
-                        settings["piano"], lambda s: s in ("vsco", "salamander"))
+                        DEFAULTS["piano"], lambda s: s in ("vsco", "salamander"))
+    merged = _validated(path, DEFAULTS | saved | {"fps": fps, "piano": piano})
     root.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(saved | {"fps": fps, "piano": piano}, indent=2) + "\n")
+    path.write_text(json.dumps(saved | {"fps": merged["fps"], "piano": merged["piano"]}, indent=2) + "\n")
     return read(root)
 
 
