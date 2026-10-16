@@ -59,8 +59,8 @@ class LayerSource:
         self.tex = SourceTexture(gpu, size, alpha=info.alpha, matrix=info.matrix, full_range=info.full_range)
 
     def content_size(self) -> tuple:
-        w, h = self.native
-        return (w / 2, h / 2) if w >= 3000 else (float(w), float(h))
+        w, h = self.native  # capture pixels over the entry's scale: local px
+        return (w / self.asset.scale, h / self.asset.scale)
 
     def update(self, t_src: float) -> None:
         if self.reader is not None:
@@ -198,10 +198,10 @@ class Compositor:
         bar.tex.use(1)
         self.cursor_tex.tex.use(2)
         view = value(p.view, t)
-        uni = dict(mvp=mvp_b, origin=(0.0, 0.0), extent=(W, H), size=(W, H), radius=p.radius, titlebar=tb,
-                   content=0, view=view, lod_bias=-0.25, bar=1, bar_color=_lin(art.BAR),
-                   border_color=_lin(art.HAIRLINE), border_alpha=1.0, opacity=alpha,
-                   dim=float(value(p.dim, t)), sat=float(value(p.saturation, t)), cursor=2, cursor_on=0)
+        uni = {"mvp": mvp_b, "origin": (0.0, 0.0), "extent": (W, H), "size": (W, H), "radius": p.radius, "titlebar": tb,
+               "content": 0, "view": view, "lod_bias": -0.25, "bar": 1, "bar_color": _lin(art.BAR),
+               "border_color": _lin(art.HAIRLINE), "border_alpha": 1.0, "opacity": alpha,
+               "dim": float(value(p.dim, t)), "sat": float(value(p.saturation, t)), "cursor": 2, "cursor_on": 0}
         if p.cursor is not None:
             uni.update(self.cursor_uniforms(p, t))
         g.draw_quad("plane", **uni)
@@ -217,14 +217,14 @@ class Compositor:
             cx, cy = c.pos(ct)
             rip[i] = (cx / vw, cy / vh, age, 1.0)
         sw, sh = self.cursor_css
-        return dict(cursor_on=1, cursor_pos=(x / vw, y / vh), cursor_size=(sw * c.scale / vw, sh * c.scale / vh),
-                    cursor_hot=self.cursor_hot, ripples=rip, capture_px=(float(vw), float(vh)))
+        return {"cursor_on": 1, "cursor_pos": (x / vw, y / vh), "cursor_size": (sw * c.scale / vw, sh * c.scale / vh),
+                "cursor_hot": self.cursor_hot, "ripples": rip, "capture_px": (float(vw), float(vh))}
 
     def resolve_layer(self, p: Plane, cam: Camera, t: float, dest, content) -> None:
         """Scratch -> dest through the depth-of-field gather."""
         g = self.gpu
         blur = float(value(p.blur, t))
-        uni = dict(src=0, res=DESIGN, plane=0, blur=blur, aperture=0.0, focus=1.0, max_radius=64.0)
+        uni = {"src": 0, "res": DESIGN, "plane": 0, "blur": blur, "aperture": 0.0, "focus": 1.0, "max_radius": 64.0}
         if self.q.dof and p.space == "world":
             proj, view, eye, fwd, focus, aperture = cam.matrices(t)
             if aperture > 0:

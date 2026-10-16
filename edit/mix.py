@@ -20,7 +20,12 @@ from pathlib import Path
 import numpy as np
 import pyloudnorm
 import soundfile as sf
-from scipy.ndimage import gaussian_filter1d, maximum_filter1d, minimum_filter1d, uniform_filter1d
+from scipy.ndimage import (
+    gaussian_filter1d,
+    maximum_filter1d,
+    minimum_filter1d,
+    uniform_filter1d,
+)
 from scipy.signal import butter, lfilter, resample_poly, sosfilt, sosfiltfilt
 
 from editkit.assets import ROOT, SOUNDTRACK
@@ -96,7 +101,7 @@ def narration_track(n: int) -> np.ndarray:
     for sec in timeline()["narration"]:
         x = load(ROOT / sec["file"]).mean(axis=1)
         y = voice_chain(x)
-        i = int(round(sec["start"] * SR))
+        i = round(sec["start"] * SR)
         out[i:i + len(y)] += y[: max(n - i, 0)]
     # voice to about -18 LUFS before the master stage
     loud = pyloudnorm.Meter(SR).integrated_loudness(out[:, None].repeat(2, 1))
@@ -244,7 +249,7 @@ def true_peak_limit(x: np.ndarray, ceiling_db: float = -1.6) -> np.ndarray:  # m
 
 def measure(path: Path) -> str:
     r = subprocess.run(["ffmpeg", "-hide_banner", "-nostats", "-i", str(path), "-af", "ebur128=peak=true",
-                        "-f", "null", "-"], capture_output=True, text=True)
+                        "-f", "null", "-"], check=False, capture_output=True, text=True)
     if r.returncode != 0:
         return f"loudness measurement failed (ffmpeg exit {r.returncode}): {r.stderr.strip()[-400:]}"
     tail = r.stderr[r.stderr.rfind("Summary"):]
@@ -254,7 +259,7 @@ def measure(path: Path) -> str:
 
 def main() -> None:
     total = edl().END
-    n = int(round(total * SR))
+    n = round(total * SR)
     voice = narration_track(n)
     bed = voice[:, None].repeat(2, 1) + music_track(n, voice)
     mix = bed + sound_design(n)

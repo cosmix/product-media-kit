@@ -11,7 +11,7 @@ import queue
 import subprocess
 import threading
 from dataclasses import dataclass
-from functools import lru_cache
+from functools import cache
 from pathlib import Path
 
 from .hw import cuda_decode, hwaccel
@@ -34,7 +34,7 @@ class Probe:
         return self.pix_fmt.startswith(ALPHA_FORMATS)
 
 
-@lru_cache(maxsize=None)
+@cache
 def probe(path: str) -> Probe:
     out = subprocess.run(
         ["ffprobe", "-v", "error", "-select_streams", "v:0", "-show_streams", "-show_format",

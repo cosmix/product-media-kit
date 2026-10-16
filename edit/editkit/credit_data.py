@@ -3,7 +3,7 @@ video description (credits.py).
 
 Credits carry only what a licence requires: CC BY b-roll and CC BY samples. CC0 samples
 and the TTS narration need no attribution, and a video without music or b-roll credits none.
-Optional rows the human asks for go in edit/credits.json (README.md, "Subtitles and credits"):
+Optional rows the human asks for go in edit/credits.json (guides/video.md, "Subtitles and credits"):
 
     {"title": "<product>: introduction", "rows": [["Narration", "Gemini TTS (<voice>)"]]}
 """

@@ -1,17 +1,20 @@
 """Subtitles from the narration scripts, timed with the whisper word timings.
 
-Usage: uv run subs.py            -> out/intro.srt (nothing for a video without narration)
+Usage: uv run subs.py [--final] [--revision vN]
+  -> outputs/<stage>-<slug>-v<N>.srt, stage draft unless --final, N the latest mp4 of that stage
+  unless --revision (nothing is written for a video without narration)
 """
 
+import argparse
 import difflib
 import re
 import sys
-from pathlib import Path
 
 from editkit.assets import ROOT
+from editkit.outputs import latest_revision, output_path, read_slug, revision_arg
 from editkit.shots import _words, timeline
 
-OUT = Path(__file__).resolve().parent / "out" / "intro.srt"
+OUTPUTS = ROOT / "outputs"
 MAX_LINE = 42
 
 
@@ -73,7 +76,7 @@ def _wrap(text: str) -> str:
 
 
 def _ts(t: float) -> str:
-    ms = max(0, int(round(t * 1000)))
+    ms = max(0, round(t * 1000))
     return f"{ms // 3600000:02d}:{ms // 60000 % 60:02d}:{ms // 1000 % 60:02d},{ms % 1000:03d}"
 
 
@@ -103,16 +106,22 @@ def cues() -> list[tuple[float, float, str]]:
 
 
 def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--final", action="store_true", help="write the final-stage file (default draft)")
+    ap.add_argument("--revision", type=revision_arg, metavar="vN", help="attach to this revision instead of the latest mp4")
+    a = ap.parse_args()
     timed = cues()
     if not timed:
         print("no narration in narration/timeline.json: no subtitles written")
         return
-    OUT.parent.mkdir(exist_ok=True)
+    slug, stage = read_slug(ROOT), "final" if a.final else "draft"
+    rev = a.revision or latest_revision(OUTPUTS, slug, stage, "mp4") or 1
+    out = output_path(OUTPUTS, slug, stage, "srt", primary_ext="mp4", revision=rev)
     lines = []
     for n, (s, e, p) in enumerate(timed, 1):
         lines += [str(n), f"{_ts(s)} --> {_ts(e)}", _wrap(p), ""]
-    OUT.write_text("\n".join(lines))
-    print(f"wrote {OUT} ({len(timed)} cues)")
+    out.write_text("\n".join(lines))
+    print(f"wrote {out} ({len(timed)} cues)")
 
 
 if __name__ == "__main__":

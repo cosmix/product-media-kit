@@ -5,6 +5,8 @@ import sys
 from functools import lru_cache
 from pathlib import Path
 
+from PIL import Image
+
 from .assets import ROOT, resolve
 from .ease import Track
 from .scene import Cursor, Plane, home_distance
@@ -17,7 +19,7 @@ D = home_distance(30.0)
 def timeline() -> dict:
     path = ROOT / "narration" / "timeline.json"
     if not path.exists():
-        sys.exit(f"no {path}: build it with narration/build_timeline.py (README.md, \"Narration\")")
+        sys.exit(f"no {path}: build it with narration/build_timeline.py (guides/video.md, \"Narration\")")
     return json.loads(path.read_text())
 
 
@@ -94,10 +96,16 @@ def terminal(key: str, start: float, end: float, title: str, **kw) -> Plane:
 
 
 def content_size(key: str) -> tuple[float, float]:
-    """A capture's size in local px: 2x captures count at half size (CSS px)."""
-    info = resolve(key).info
-    w, h = info.width, info.height
-    return (w / 2, h / 2) if w >= 3000 else (float(w), float(h))
+    """A capture's size in local px: its pixel size over the manifest entry's scale."""
+    asset = resolve(key)
+    if asset.info:
+        w, h = asset.info.width, asset.info.height
+    else:  # a still: the manifest knows its size, else read the PNG
+        w, h = asset.entry.get("width"), asset.entry.get("height")
+        if not (w and h):
+            with Image.open(asset.path) as im:
+                w, h = im.size
+    return w / asset.scale, h / asset.scale
 
 
 def framed(plane: Plane, keys: list) -> Plane:

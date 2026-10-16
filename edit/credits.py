@@ -1,17 +1,25 @@
 """Credits for the video description, from the same data as the on-screen credits.
 
-Usage: uv run credits.py        -> out/CREDITS.txt
+Usage: uv run credits.py [--final] [--revision vN]
+  -> outputs/<stage>-<slug>-v<N>-credits.txt, stage draft unless --final, N the latest mp4 of that
+  stage unless --revision
 """
 
-from pathlib import Path
+import argparse
 
 from editkit import credit_data as cd
+from editkit.assets import ROOT
+from editkit.outputs import output_path, read_slug, revision_arg
 from editkit.project import edl
 
-OUT = Path(__file__).resolve().parent / "out" / "CREDITS.txt"
+OUTPUTS = ROOT / "outputs"
 
 
 def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--final", action="store_true", help="write the final-stage file (default draft)")
+    ap.add_argument("--revision", type=revision_arg, metavar="vN", help="attach to this revision instead of the latest mp4")
+    a = ap.parse_args()
     lines = [cd.title(), ""] if cd.title() else []
     if broll := cd.broll(list(getattr(edl(), "BROLL_CLIPS", []))):
         lines += ["B-roll (Creative Commons Attribution):"]
@@ -20,12 +28,13 @@ def main() -> None:
         lines += ["Music: original score, with samples from"]
         lines += [f"- {c.title}, {c.by} ({c.licence}) {c.url}".rstrip() for c in samples]
     lines += [f"{label}: {text}" for label, text in cd.extra_rows()]
-    OUT.parent.mkdir(exist_ok=True)
-    OUT.write_text("\n".join(lines) + "\n")
+    out = output_path(OUTPUTS, read_slug(ROOT), "final" if a.final else "draft", "txt",
+                      primary_ext="mp4", suffix="credits", revision=a.revision)
+    out.write_text("\n".join(lines) + "\n")
     if lines:
-        print(f"wrote {OUT}")
+        print(f"wrote {out}")
     else:
-        print(f"nothing to credit (no music, b-roll or credits.json rows): wrote an empty {OUT}")
+        print(f"nothing to credit (no music, b-roll or credits.json rows): wrote an empty {out}")
 
 
 if __name__ == "__main__":

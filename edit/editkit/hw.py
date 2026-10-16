@@ -10,7 +10,7 @@ and scales on the CPU. Each probe runs once per process.
 import subprocess
 import sys
 import tempfile
-from functools import lru_cache
+from functools import cache, lru_cache
 from pathlib import Path
 
 MAC = sys.platform == "darwin"
@@ -21,18 +21,18 @@ _TEST_SRC = ["-f", "lavfi", "-i", "testsrc2=s=256x144:r=30:d=0.2"]
 def _ffmpeg_ok(*args: str) -> bool:
     cmd = ["ffmpeg", "-v", "error", "-nostdin", "-y", *args]
     try:
-        return subprocess.run(cmd, capture_output=True, timeout=60).returncode == 0
+        return subprocess.run(cmd, check=False, capture_output=True, timeout=60).returncode == 0
     except (OSError, subprocess.TimeoutExpired):
         return False
 
 
-@lru_cache(maxsize=None)
+@cache
 def _encoder_works(name: str, args: tuple[str, ...]) -> bool:
     """True when ffmpeg lists the encoder and a short test encode through it succeeds (a build
     can list h264_nvenc on a machine with no NVIDIA driver). `args` are the encoder arguments the
     real encode uses, so a driver that rejects them fails the probe."""
     try:
-        listed = subprocess.run(["ffmpeg", "-hide_banner", "-encoders"], capture_output=True, text=True,
+        listed = subprocess.run(["ffmpeg", "-hide_banner", "-encoders"], check=False, capture_output=True, text=True,
                                 timeout=60).stdout
     except (OSError, subprocess.TimeoutExpired):
         return False

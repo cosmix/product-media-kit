@@ -4,7 +4,7 @@ Everything is drawn at 2x (or more) of its on-screen size and handed to the GPU 
 mip chain, so it stays crisp at any scale the camera puts it at.
 """
 
-from functools import lru_cache
+from functools import cache, lru_cache
 
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
@@ -24,7 +24,7 @@ BAR = (0x1C, 0x1C, 0x1E)
 DOTS = ((0x4A, 0x4A, 0x4D),) * 3
 
 
-@lru_cache(maxsize=None)
+@cache
 def font(size: int, weight: int = 400, italic: bool = False) -> ImageFont.FreeTypeFont:
     return ImageFont.truetype(design.font(weight, italic), size)
 
