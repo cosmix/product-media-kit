@@ -2,14 +2,14 @@
 # Install the system packages this kit needs and that require administrator rights, plus uv.
 # Run it in your own terminal, outside Claude Code: it asks for your password through sudo (or
 # through Homebrew's installer). ./setup.sh needs no administrator rights and never calls sudo.
-#   ./system-deps.sh [--yes] [--dry-run]
+#   ./system-deps.sh [--yes] [--dry-run] [--for video|blog|both]
 # macOS: Homebrew (installed if missing). Linux: apt-get (Debian, Ubuntu) or dnf (Fedora).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 
 usage() {
   cat <<'EOF'
-Usage: ./system-deps.sh [--yes] [--dry-run]
+Usage: ./system-deps.sh [--yes] [--dry-run] [--for video|blog|both]
 
 Installs what is missing of: ffmpeg, ripgrep, tmux and the basic tools (curl, tar, unzip, xz);
 Mesa's EGL and DRI drivers for rendering without a GPU driver (Linux); the DejaVu and Noto
@@ -19,39 +19,58 @@ environments use. Homebrew is installed first on a Mac that lacks it.
 
   --yes       do not ask "Continue? [Y/n]"
   --dry-run   print what would be installed and change nothing
+  --for MEDIUM  video, blog or both (the default). For blog, Mesa, xz and unzip are skipped
+              and Fedora gets ffmpeg-free from its own repositories instead of RPM Fusion's
+              ffmpeg (which has libx264, needed to encode video)
 
 Run it in a terminal outside Claude Code. ./setup.sh then needs no administrator rights.
 EOF
 }
 
-YES=0 DRY=0
-for arg in "$@"; do
-  case "$arg" in
+YES=0 DRY=0 FOR=both
+while [ $# -gt 0 ]; do
+  case "$1" in
     -h|--help) usage; exit 0 ;;
     --yes|-y) YES=1 ;;
     --dry-run) DRY=1 ;;
-    *) echo "unknown option: $arg (try --help)" >&2; exit 2 ;;
+    --for)
+      [ $# -ge 2 ] || { echo "--for needs video, blog or both (try --help)" >&2; exit 2; }
+      FOR="$2"; shift ;;
+    *) echo "unknown option: $1 (try --help)" >&2; exit 2 ;;
   esac
+  shift
 done
+case "$FOR" in video|blog|both) ;; *) echo "--for takes video, blog or both, not \"$FOR\" (try --help)" >&2; exit 2 ;; esac
 
 die() { echo "system-deps.sh: $*" >&2; exit 1; }
 
 # One line per need: command to look for | apt package | dnf package | brew formula.
 # "-" means none for that manager; a line without a command is checked in the package database.
-TABLE='ffmpeg|ffmpeg|ffmpeg|ffmpeg
+# Fedora's own ffmpeg-free (stock repositories, libvpx-vp9 and GIF included) has no libx264, so the video
+# gets RPM Fusion's ffmpeg: the dnf column says ffmpeg and NEED_FUSION swaps it in below.
+# Debian's fonts-noto-core is three Fedora packages (symbols, symbols 2, math): the dnf column continues.
+FFMPEG_DNF=ffmpeg
+if [ "$FOR" = blog ]; then FFMPEG_DNF=ffmpeg-free; fi
+TABLE="ffmpeg|ffmpeg|$FFMPEG_DNF|ffmpeg
 curl|curl|curl|-
 tar|tar|tar|-
-xz|xz-utils|xz|-
-unzip|unzip|unzip|-
 rg|ripgrep|ripgrep|ripgrep
 tmux|tmux|tmux|tmux
--|libegl1|mesa-libEGL|-
--|libegl-mesa0|-|-
--|libgl1-mesa-dri|mesa-dri-drivers|-
 -|fonts-dejavu-core|dejavu-sans-fonts|-
 -|-|dejavu-sans-mono-fonts|-
--|fonts-noto-core|-|-
--|fonts-noto-color-emoji|google-noto-color-emoji-fonts|-'
+-|fonts-noto-core|google-noto-sans-symbols-fonts|-
+-|-|google-noto-sans-symbols-2-fonts|-
+-|-|google-noto-sans-math-fonts|-
+-|fonts-noto-color-emoji|google-noto-color-emoji-fonts|-"
+# the video's own needs: sample archives (xz, unzip) and Mesa's EGL and DRI for rendering without a GPU driver
+if [ "$FOR" != blog ]; then
+  TABLE="$TABLE
+xz|xz-utils|xz|-
+unzip|unzip|unzip|-
+-|libegl1|mesa-libEGL|-
+-|libegl-mesa0|-|-
+-|libgl1-mesa-dri|mesa-dri-drivers|-"
+fi
 
 OS="$(uname -s)"
 MGR=none
@@ -97,8 +116,7 @@ NEED_BREW=0 NEED_FUSION=0 NEED_UV=0 NEED_DEPS=0
 if [ "$MGR" = brew ] && ! command -v brew >/dev/null 2>&1; then NEED_BREW=1; fi
 if ! command -v uv >/dev/null 2>&1; then NEED_UV=1; fi
 if [ "$MGR" = apt ]; then NEED_DEPS=1; fi
-if [ "$MGR" = dnf ]; then
-  # Fedora's own ffmpeg lacks libx264; it comes from RPM Fusion
+if [ "$MGR" = dnf ] && [ "$FOR" != blog ]; then
   case " $PKGS " in *" ffmpeg "*) NEED_FUSION=1; PKGS="$(sed 's/\(^\| \)ffmpeg\( \|$\)/ /; s/^ *//; s/ *$//' <<<"$PKGS")" ;; esac
 fi
 

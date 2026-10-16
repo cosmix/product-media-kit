@@ -12,10 +12,12 @@ Usage:
     uv run .claude/skills/brand/check.py [PROJECT_ROOT]
 
 PROJECT_ROOT defaults to the current directory. Prints one line per item, ok / WARN / MISSING,
-and exits 1 if anything is MISSING. design.json follows the rules of the project's loaders
-(motion/lib/design.py): known keys only, #rrggbb colours, existing font and logo paths. A font
-role may name a family instead of a file; tools/fonts.py --check then reports the families it
-cannot find and the styles it cannot match exactly.
+and exits 1 if anything is MISSING. design.json is held to the strictest loader: known keys only
+(fixtures/tui/src/tuicap/design.py rejects any other key; post/src/postkit/design.py ignores
+them, so a misspelled key would pass there unseen), #rrggbb colours, existing font and logo
+paths; grain is optional (a number >= 0) and only the edit reads it. A font role may name a
+family instead of a file; tools/fonts.py --check then reports the families it cannot find and
+the styles it cannot match exactly.
 """
 
 import argparse
@@ -277,7 +279,7 @@ def check_contrast(data):
 def check_fresh(root):
     design = root / "design.json"
     sources = [root / "BRAND.md"] if (root / "BRAND.md").is_file() else []
-    sources += [p for p in (root / "brand").rglob("*") if p.is_file()] if (root / "brand").is_dir() else []
+    sources += [p for p in (root / "brand").rglob("*") if p.is_file() and not is_derived(root, p)] if (root / "brand").is_dir() else []
     newer = sorted(str(p.relative_to(root)) for p in sources if p.stat().st_mtime > design.stat().st_mtime)
     if newer:
         status("WARN", "design.json", f"older than {newer[0]}{f' and {len(newer) - 1} more' if len(newer) > 1 else ''}: rerun the brand skill")

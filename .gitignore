@@ -13,6 +13,9 @@ build/
 # downloaded sample libraries (setup.sh fetches them)
 music/samples/
 
+# capture self-test output
+captures/*-selftest/
+
 # secrets
 .env
 
@@ -24,3 +27,12 @@ music/samples/
 # machine-specific font resolution (tools/fonts.py)
 brand/fonts/resolved.json
 brand/fonts/.local/
+
+# loom workspace state
+.loom/work/
+.loom/work
+
+# loom worktrees
+.worktrees/
+.worktrees
+.loom/cache/

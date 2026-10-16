@@ -1,13 +1,22 @@
 ---
 name: brand
-description: Set up and apply the project's brand guidelines for the video. Writes or reads BRAND.md and the brand/ folder (logo, fonts, palette, reference assets), generates design.json (fonts, colours, grain, logo) from them, checks them with check.py, and records the brand rules in HANDBOOK.md. Use when the user mentions brand guidelines, BRAND.md, a logo, a palette, brand colours, fonts for the video, brand assets, or design.json.
+description: Set up and apply the project's brand guidelines for the video, the blog post, or both. Writes or reads BRAND.md and the brand/ folder (logo, fonts, palette, reference assets), generates design.json (fonts, colours, grain, logo) from them, checks them with check.py, and records the brand rules in HANDBOOK.md. Use when the user mentions brand guidelines, BRAND.md, a logo, a palette, brand colours, fonts for the video or the post, screenshots, brand assets, or design.json.
 ---
 
 # Brand
 
-`BRAND.md` at the project root holds the brand guidelines; `brand/` holds the assets. Every
-renderer reads `design.json` (README.md, "Design system" and "Brand"), which this skill generates
-from them. Files next to this one: `BRAND.template.md` (the guidelines template) and `check.py`
+`BRAND.md` at the project root holds the brand guidelines; `brand/` holds the assets. These
+tools read `design.json` (README.md, "Design system" and "Brand"), which this skill generates
+from them:
+
+| Reader | Medium | Uses |
+| --- | --- | --- |
+| `motion` | video | fonts, colours, logo (`lib/logo.py`) |
+| `edit` | video | fonts, colours, logo, grain |
+| `tuicap` | both | fonts, and background and text colours, for terminal stills |
+| `postkit` | blog | the accent colour for highlights and callouts, the bold font for callout numbers; frames use fixed colours |
+
+Files next to this one: `BRAND.template.md` (the guidelines template) and `check.py`
 (the checker).
 
 ## Rules
@@ -45,7 +54,8 @@ from them. Files next to this one: `BRAND.template.md` (the guidelines template)
 
 1. Read `BRAND.md` and list `brand/` recursively. Read the palette files for hex values; a value
    there that `BRAND.md` does not mention is a question, not a colour to use.
-2. Write `design.json` at the project root. Keys (all optional; the loaders reject any other key):
+2. Write `design.json` at the project root. Keys (all optional; `motion`, `tuicap` and the checker reject
+   any other key, `postkit` ignores them):
 
    ```json
    {
@@ -76,21 +86,22 @@ from them. Files next to this one: `BRAND.template.md` (the guidelines template)
    ```
 
    The values above show the shape only; take every value from `BRAND.md` and `brand/`.
-   - Fonts: the body family fills `regular`, `bold`, `italic` and `bold_italic`. Renderers pick a
-     font by weight, so a display face goes under `weights` at the weights titles use (or `bold`
-     when titles are the only bold text); say which in the handbook. `mono` is the terminal and
-     code font. A role is either a file path relative to the project root (ends in `.ttf`,
+   - Fonts: the body family fills `regular`, `bold`, `italic` and `bold_italic`. Tools pick a
+     font by weight, so a display face goes under `weights` at the weights titles and headings
+     use (or `bold` when those are the only bold text); say which in the handbook. `postkit`
+     draws callout numbers in the `bold` font. `mono` is the terminal and code font. A role is either a file path relative to the project root (ends in `.ttf`,
      `.otf` or `.ttc`) or a family name (`"Inter"`). `family` names the body family for every
      one of the four roles the file does not set itself; a family name under a role means that
      family at the role's weight (`"800": "Inter"` is Inter at 800). Name a family when the font
      is installed on the machine or its files are in `brand/fonts/`; the example above mixes
      both forms only to show them, so write the form `BRAND.md` and `brand/` support.
    - Colours: the four roles only, `#rrggbb`. Other brand colours stay in `BRAND.md` and the
-     handbook; scenes use them by hex.
-   - Grain: leave it out (default 0.022) unless the feel calls for film texture (raise it,
+     handbook; scenes and posts use them by hex.
+   - Grain (video only; the edit reads it, the blog ignores it): leave it out (default 0.022) unless the feel calls for film texture (raise it,
      0.03-0.05) or a flat, clean look (`0`).
    - Logo: `on_dark` is the variant for dark grounds (light ink), `on_light` for light grounds.
-     Either may be absent. Motion draws it with `lib/logo.py`.
+     Either may be absent. The video's motion draws it with `lib/logo.py`; a post that shows the
+     logo uses the variant that matches the page.
 
 3. If `design.json` names a family, find its files from the project root and report what was
    found where (`brand/fonts`, `installed`) and every `WARN` (a weight or style the family lacks):
@@ -115,24 +126,28 @@ from them. Files next to this one: `BRAND.template.md` (the guidelines template)
 
 5. Write a `## Brand` section into `HANDBOOK.md` (README.md, "`HANDBOOK.md`: the project's own
    handbook"; create the file if it does not exist, replace the section if it does). One short
-   block per workstream the video has (narration, music and b-roll are optional; skip the block
-   of one the human left out), each a list of rules quoted or condensed from `BRAND.md`:
-   - narration: script voice and tone, words to use and avoid, the narration voice
-   - music: genre, tempo, energy, what to avoid
-   - motion: colours and their roles, fonts and weights, logo variant, clear space and minimum
-     size, motion feel, things to avoid
-   - captures (web and TUI): mono font, terminal colours, what the product UI keeps as is
-   - edit: grounds, transitions, end card and credits, trademark and licence lines
+   block per part of each chosen medium (a part the human left out, such as narration, music or
+   b-roll, gets no block), each a list of rules quoted or condensed from `BRAND.md`:
+   - narration (video): script voice and tone, words to use and avoid, the narration voice
+   - music (video): genre, tempo, energy, what to avoid
+   - motion (video): colours and their roles, fonts and weights, logo variant, clear space and
+     minimum size, motion feel, things to avoid
+   - captures (both; web and TUI): theme, mono font, terminal colours, what the product UI keeps
+     as is
+   - edit (video): grounds, transitions, end card and credits, trademark and licence lines
+   - writing (blog): voice and tone of the prose, words to use and avoid
+   - images (blog): highlight colour, frame style, callout style, logo variant and minimum size
+     in CSS px, things to avoid
 6. Report every gap or conflict as a numbered question for the human: a section left blank, a
    file `BRAND.md` names that `brand/` lacks, a colour that differs between `BRAND.md` and a
-   palette file, a font licence that may not allow video, a contrast warning, a missing logo
+   palette file, a font licence that may not allow video or use on the web, a contrast warning, a missing logo
    variant.
 
 ## Fonts by family
 
 When `BRAND.md` names a font that is neither installed nor in `brand/fonts/`:
 
-- If it has an open licence that allows use in video (OFL, Apache), you may fetch it yourself.
+- If it has an open licence that allows use in video and on the web (OFL, Apache), you may fetch it yourself.
   The GitHub repository `google/fonts` is a good source: `ofl/<name>/`, `apache/<name>/` or
   `ufl/<name>/`, where `<name>` is the family lowercased without spaces, and `METADATA.pb` there
   lists the font files. Save the font files and the licence file (`OFL.txt`, `LICENSE.txt`) into

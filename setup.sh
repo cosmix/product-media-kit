@@ -9,17 +9,23 @@ ROOT="$(cd "$(dirname "$0")" && pwd)"
 
 CHECK=0
 WANT_SAMPLES=1
-for arg in "$@"; do
-  case "$arg" in
+FOR=""
+while [ $# -gt 0 ]; do
+  case "$1" in
     --check) CHECK=1 ;;
     --no-samples) WANT_SAMPLES=0 ;;
+    --for)
+      [ $# -ge 2 ] || { echo "--for needs video, blog or both (try --help)" >&2; exit 2; }
+      FOR="$2"; shift ;;
     -h|--help)
       cat <<'EOF'
-Usage: ./setup.sh [--check] [--no-samples]
+Usage: ./setup.sh [--check] [--for video|blog|both] [--no-samples]
 
-  (no flag)     install Python environments, the Claude Code skills (narration,
-                brand; into .claude/skills/ of this project), sample libraries
-                (about 3.4 GB download), Chromium and the Whisper model
+  (no flag)     install Python environments, the Claude Code skills (brand, narration,
+                mediatime; into .claude/skills/ of this project), Chromium and, for a
+                video, sample libraries (about 3.4 GB download) and the Whisper model
+  --for MEDIUM  check and set up only what MEDIUM needs: video, blog or both. Without it
+                the media in project.json are used; with none there, everything
   --no-samples  skip the sample libraries: a video without music, or with a
                 score of synthesized instruments only, does not need them
   --check       report what is ready and what is missing; change nothing
@@ -28,16 +34,38 @@ Exit status is 1 if anything required is MISSING, else 0. The Gemini API key,
 the sample libraries and the Whisper model are optional (WARN).
 EOF
       exit 0 ;;
-    *) echo "unknown option: $arg (try --help)" >&2; exit 2 ;;
+    *) echo "unknown option: $1 (try --help)" >&2; exit 2 ;;
   esac
+  shift
 done
+
+# media_from_project: the "media" entries of project.json (video and blog), one per line; no jq
+media_from_project() {
+  [ -f "$ROOT/project.json" ] || return 0
+  tr -d '\n' <"$ROOT/project.json" | sed -n 's/.*"media"[[:space:]]*:[[:space:]]*\[\([^]]*\)\].*/\1/p' \
+    | grep -oE '"(video|blog)"' | tr -d '"' || true
+}
+
+# scope: WANT_VIDEO and WANT_BLOG, from --for, else project.json, else both
+WANT_VIDEO=0 WANT_BLOG=0
+case "$FOR" in
+  video) WANT_VIDEO=1 ;;
+  blog) WANT_BLOG=1 ;;
+  both) WANT_VIDEO=1; WANT_BLOG=1 ;;
+  "")
+    MEDIA="$(media_from_project)"
+    case "$MEDIA" in *video*) WANT_VIDEO=1 ;; esac
+    case "$MEDIA" in *blog*) WANT_BLOG=1 ;; esac
+    if [ "$WANT_VIDEO$WANT_BLOG" = 00 ]; then WANT_VIDEO=1; WANT_BLOG=1; fi ;;
+  *) echo "--for takes video, blog or both, not \"$FOR\" (try --help)" >&2; exit 2 ;;
+esac
 
 MISSING=0
 WARNED=0
 OS="$(uname -s)"
 SAMPLES="$ROOT/music/samples"
 SKILLS_DST="$ROOT/.claude/skills"
-KIT_SKILLS="brand narration" # the skills install.sh copies; checked where claude-skills/ is absent
+KIT_SKILLS="brand narration mediatime" # the skills install.sh copies; checked where claude-skills/ is absent
 
 # status LEVEL ITEM [HINT]: one line per item, counts WARN and MISSING
 status() {
@@ -57,38 +85,52 @@ check_cmd() { # check_cmd CMD LEVEL HINT
   if command -v "$1" >/dev/null 2>&1; then status ok "$1"; else status "$2" "$1" "$3"; fi
 }
 
+# check_ffmpeg: the video needs ffmpeg with libx264, prores_ks and aac; the blog only makes clips with it.
+# Output is captured first: `grep -q` exits at the first match and SIGPIPEs ffmpeg under pipefail.
+check_ffmpeg() {
+  local lvl=WARN note=" (clips only: GIF/WebM; stills work without it)" enc e hw=h264_nvenc
+  if [ "$WANT_VIDEO" = 1 ]; then lvl=MISSING; note=""; fi
+  check_cmd ffmpeg "$lvl" "$SYSDEPS$note"
+  check_cmd ffprobe "$lvl" "$SYSDEPS$note"
+  command -v ffmpeg >/dev/null 2>&1 || return 0
+  enc="$(ffmpeg -hide_banner -encoders 2>/dev/null || true)"
+  if ! grep -qw libvpx-vp9 <<<"$enc"; then
+    status WARN "ffmpeg encoder libvpx-vp9" "WebM clips need an ffmpeg build with libvpx-vp9: $SYSDEPS"
+  fi
+  [ "$WANT_VIDEO" = 1 ] || return 0
+  for e in libx264 prores_ks aac; do
+    if grep -qw "$e" <<<"$enc"; then status ok "ffmpeg encoder $e"
+    else status MISSING "ffmpeg encoder $e" "install an ffmpeg build with $e: $SYSDEPS"; fi
+  done
+  if [ "$OS" = Darwin ]; then hw=h264_videotoolbox; fi
+  # a build can list h264_nvenc on a machine without an NVIDIA driver: test an encode
+  if grep -qw "$hw" <<<"$enc" && ffmpeg -v error -nostdin -f lavfi -i testsrc2=s=256x144:d=0.2 -c:v "$hw" -f null - >/dev/null 2>&1
+  then status ok "ffmpeg encoder $hw"
+  else status WARN "ffmpeg encoder $hw" "not usable here; edit previews and placeholders use libx264 (slower)"; fi
+}
+
 check_commands() {
   section "Commands"
   check_cmd uv MISSING "$SYSDEPS"
-  check_cmd ffmpeg MISSING "$SYSDEPS"
-  check_cmd ffprobe MISSING "$SYSDEPS"
+  check_ffmpeg
   check_cmd curl MISSING "$SYSDEPS"
   check_cmd tar MISSING "$SYSDEPS"
-  # macOS tar unpacks .tar.xz without the xz command
-  if [ "$OS" != Darwin ]; then check_cmd xz MISSING "$SYSDEPS"; fi
-  check_cmd unzip MISSING "$SYSDEPS"
+  if [ "$WANT_VIDEO" = 1 ]; then
+    # macOS tar unpacks .tar.xz without the xz command
+    if [ "$OS" != Darwin ]; then check_cmd xz MISSING "$SYSDEPS"; fi
+    check_cmd unzip MISSING "$SYSDEPS"
+  fi
   check_cmd rg WARN "$SYSDEPS (search commands in README.md)"
   check_cmd tmux WARN "$SYSDEPS (terminal captures only)"
   check_cmd claude WARN "curl -fsSL https://claude.ai/install.sh | bash (Claude Code CLI)"
-  if command -v ffmpeg >/dev/null 2>&1; then
-    local enc hw=h264_nvenc
-    enc="$(ffmpeg -hide_banner -encoders 2>/dev/null || true)"
-    for e in libx264 prores_ks aac; do
-      if grep -qw "$e" <<<"$enc"; then status ok "ffmpeg encoder $e"
-      else status MISSING "ffmpeg encoder $e" "install an ffmpeg build with $e: $SYSDEPS"; fi
-    done
-    if [ "$OS" = Darwin ]; then hw=h264_videotoolbox; fi
-    # a build can list h264_nvenc on a machine without an NVIDIA driver: test an encode
-    if grep -qw "$hw" <<<"$enc" && ffmpeg -v error -nostdin -f lavfi -i testsrc2=s=256x144:d=0.2 -c:v "$hw" -f null - >/dev/null 2>&1
-    then status ok "ffmpeg encoder $hw"
-    else status WARN "ffmpeg encoder $hw" "not usable here; edit previews and placeholders use libx264 (slower)"; fi
-  fi
 }
 
 sync_envs() {
   section "Python environments"
-  local d
-  for d in edit motion music fixtures/web fixtures/tui; do
+  local d envs="fixtures/web fixtures/tui"
+  if [ "$WANT_VIDEO" = 1 ]; then envs="edit motion music $envs"; fi
+  if [ "$WANT_BLOG" = 1 ]; then envs="$envs post"; fi
+  for d in $envs; do
     if [ -d "$ROOT/$d/.venv" ]; then
       status ok "$d"
     elif [ "$CHECK" = 1 ]; then
@@ -123,6 +165,7 @@ gpu_probe() {
 }
 
 check_gpu() {
+  [ "$WANT_VIDEO" = 1 ] || return 0
   section "GPU (OpenGL)"
   gpu_probe "edit compositor" edit 'from editkit.gpu import GPU; print(GPU().ctx.info["GL_RENDERER"])'
   gpu_probe "motion graphics" motion 'from lib.gfx import Gpu; print(Gpu().ctx.info["GL_RENDERER"])'
@@ -131,6 +174,7 @@ check_gpu() {
 # check_design: design.json is optional; when present, the motion loader checks its keys,
 # colours and font paths (README.md, "Design system")
 check_design() {
+  [ "$WANT_VIDEO" = 1 ] || return 0
   local py="$ROOT/motion/.venv/bin/python" out
   if [ ! -f "$ROOT/design.json" ]; then status ok "design.json" "absent: system fonts and neutral colours in use"
   elif [ ! -x "$py" ]; then status WARN "design.json" "run ./setup.sh first to check it"
@@ -190,9 +234,10 @@ check_fonts() {
     done
     hint="Menlo, Apple Symbols or Apple Color Emoji not in /System/Library/Fonts (terminal captures only)"
   else
-    for f in dejavu/DejaVuSansMono.ttf noto/NotoSansSymbols2-Regular.ttf noto/NotoSansSymbols-Regular.ttf \
-             noto/NotoSansMath-Regular.ttf noto/NotoColorEmoji.ttf; do
-      [ -f "/usr/share/fonts/truetype/$f" ] || missing=1
+    # by family through fontconfig, as tuicap finds them: the file paths differ between distributions;
+    # a machine without fc-list prints nothing and counts as missing the fonts
+    for f in "DejaVu Sans Mono" "Noto Sans Symbols2" "Noto Sans Symbols" "Noto Sans Math" "Noto Color Emoji"; do
+      [ -n "$(fc-list "$f" file 2>/dev/null || true)" ] || missing=1
     done
     hint="$SYSDEPS (terminal captures only)"
   fi
@@ -231,10 +276,12 @@ install_skills() {
   for d in $names; do install_skill "$d"; done
 }
 
-# brand_newer: files in BRAND.md and brand/ changed after design.json, relative to the project root
+# brand_newer: files in BRAND.md and brand/ changed after design.json, relative to the project root;
+# brand/fonts/resolved.json and brand/fonts/.local/ are written by tools/fonts.py, so they do not count
 brand_newer() {
   if [ -e "$ROOT/BRAND.md" ] || [ -d "$ROOT/brand" ]; then
-    (cd "$ROOT" && find BRAND.md brand -type f -newer design.json 2>/dev/null || true)
+    (cd "$ROOT" && find BRAND.md brand -type f -newer design.json ! -path brand/fonts/resolved.json \
+      ! -path 'brand/fonts/.local/*' 2>/dev/null || true)
   fi
 }
 
@@ -250,6 +297,7 @@ check_brand() {
   if [ -n "$newer" ]; then
     status WARN "design.json" "older than $(head -n 1 <<<"$newer"): rerun the brand skill"
   fi
+  [ "$WANT_VIDEO" = 1 ] || return 0
   grep -q '"logo"' "$ROOT/design.json" || return 0
   if [ ! -x "$py" ]; then status WARN "logo" "run ./setup.sh first to check it"
   elif out="$(cd "$ROOT/motion" && "$py" -c 'from lib import design; print(design.logo())' 2>&1)"
@@ -314,6 +362,7 @@ sample_set() {
 
 # fetch_samples: optional; only a score with sampled instruments (piano, strings, mallets, brass) needs them
 fetch_samples() {
+  [ "$WANT_VIDEO" = 1 ] || return 0
   section "Sample libraries"
   if [ "$CHECK" = 0 ] && [ "$WANT_SAMPLES" = 1 ]; then mkdir -p "$SAMPLES"; fi
   sample_set "Salamander piano" tar SalamanderGrandPianoV3_48khz24bit "1.2 GB" \
@@ -352,6 +401,7 @@ whisper_model() { # model name as loaded by edit/words.py
 }
 
 check_whisper() {
+  [ "$WANT_VIDEO" = 1 ] || return 0
   section "Whisper model"
   local model cache
   model="$(whisper_model)"
@@ -369,6 +419,7 @@ check_whisper() {
 }
 
 check_api_key() {
+  [ "$WANT_VIDEO" = 1 ] || return 0
   section "API key"
   if [ -n "${GEMINI_API_KEY:-}${GOOGLE_API_KEY:-}" ]; then
     status ok "Gemini API key"

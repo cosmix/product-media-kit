@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
-# Copy this kit into a project folder: the pipeline, README.md, HUMAN.md, CLAUDE.md, every skill in
-# claude-skills/ under .claude/skills/, and the project's Claude Code settings; then install the
-# system packages with the project's system-deps.sh. Needs only bash, find and tar.
+# Copy this kit into a project folder: the tools, README.md, the project's CLAUDE.md (from
+# claude-project.md), every skill in claude-skills/ under .claude/skills/, project.json and the
+# project's Claude Code settings; then install the system packages with the project's
+# system-deps.sh. Needs bash and the standard tools it calls: cat, cp, dirname, find, grep, head,
+# mkdir, paste, sed, sort, tar, tr.
 #   ./install.sh <project-dir> [--force] [--no-system] [--setup]
 set -euo pipefail
 KIT="$(cd "$(dirname "$0")" && pwd -P)"
@@ -10,18 +12,22 @@ usage() {
   cat <<'EOF'
 Usage: ./install.sh <project-dir> [--force] [--no-system] [--setup]
 
-Copies the kit into <project-dir> (created if missing):
-  every top-level item except install.sh, claude-skills/ and claude-settings.json -> <project-dir>/
-  claude-skills/<skill>/ (each skill: narration, brand, ...)  -> <project-dir>/.claude/skills/<skill>/
+Copies the kit into <project-dir> (created if missing). The project's slug comes from the folder
+name (lowercase, other characters become single hyphens; "project" when nothing is left); a note
+says so when it differs from the folder name.
+  the kit's tools, guides and README.md                       -> <project-dir>/
+  claude-project.md                                           -> <project-dir>/CLAUDE.md
+  claude-skills/<skill>/ (each skill: brand, ...)             -> <project-dir>/.claude/skills/<skill>/
   claude-settings.json (agent teams on, frontend-design plugin) -> <project-dir>/.claude/settings.json,
                                                                  only when the project has none
-  CLAUDE.md                                                   -> <project-dir>/CLAUDE.md
-Environments (.venv), caches (__pycache__, .pytest_cache, .ruff_cache, .mypy_cache),
-render output (out/, build/) and downloaded sample libraries (music/samples/) are not copied.
+  {"slug": "<slug>", "media": []}                             -> <project-dir>/project.json, only when absent
+Development files (install.sh, doc/, tests/, .loom/, .worktrees/, .claude/), environments (.venv),
+caches (__pycache__, .pytest_cache, .ruff_cache, .mypy_cache), build output (out/, build/),
+captures/, outputs/ and downloaded sample libraries (music/samples/) are not copied.
 
   --force   overwrite files that already exist in <project-dir> (no file is ever deleted),
-            except .gitignore, music/CREDITS.md and broll/CREDITS.md, which the project
-            owns and which are copied only when absent
+            except .gitignore, music/CREDITS.md, broll/CREDITS.md and project.json, which
+            the project owns and which are written only when absent
   --no-system  do not run <project-dir>/system-deps.sh after copying. That script installs the
             system packages (ffmpeg, Mesa, fonts, uv, ...) and asks for your password; skip it
             when you have no administrator rights and give `./system-deps.sh --dry-run` output
@@ -72,6 +78,12 @@ esac
 if [ -e "$DEST" ] && [ ! -d "$DEST" ]; then echo "refusing: $DEST is not a directory" >&2; exit 2; fi
 SKILLS_DEST="$DEST/.claude/skills"
 
+# the folder name is the project slug, normalised: lowercase, other characters to single hyphens
+FOLDER="${DEST##*/}"
+SLUG="$(printf '%s' "$FOLDER" | tr '[:upper:]' '[:lower:]' | LC_ALL=C sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//')"
+SLUG="${SLUG:-project}"
+[ "$SLUG" = "$FOLDER" ] || echo "Note: the folder name \"$FOLDER\" is not a slug; the project's slug is \"$SLUG\"." >&2
+
 # list_files DIR [EXCLUDE_PATH...]: files and symlinks under DIR as ./relative paths, skipping
 # generated content (environments, caches, render output, sample libraries) and the excluded paths
 list_files() {
@@ -82,8 +94,10 @@ list_files() {
   (cd "$dir" && find . \( "${prune[@]}" \) -prune -o \( -type f -o -type l \) -print | LC_ALL=C sort)
 }
 
-# mac_port_testing.md tests the kit itself and does not belong in a project
-KIT_LIST="$(list_files "$KIT" ./install.sh ./claude-skills ./claude-settings.json ./mac_port_testing.md)"
+# development files and the kit's own project files do not belong in a project folder
+[ -f "$KIT/claude-project.md" ] || { echo "kit is incomplete: claude-project.md missing" >&2; exit 1; }
+KIT_LIST="$(list_files "$KIT" ./install.sh ./claude-skills ./claude-settings.json ./claude-project.md ./CLAUDE.md \
+  ./doc ./tests ./.claude ./.loom ./.worktrees ./captures ./outputs)"
 # project-owned records: copied only when absent, never overwritten, even with --force
 KEEP_LIST="./.gitignore
 ./music/CREDITS.md
@@ -110,6 +124,7 @@ done <<<"$SKILLS"
 # every destination this install would write, one per line, for the conflict check
 planned() {
   local f s
+  printf '%s\n' "$DEST/CLAUDE.md"
   while IFS= read -r f; do printf '%s\n' "$DEST/${f#./}"; done <<<"$COPY_LIST"
   while IFS= read -r s; do
     list_files "$KIT/claude-skills/$s" | while IFS= read -r f; do printf '%s\n' "$SKILLS_DEST/$s/${f#./}"; done
@@ -126,20 +141,30 @@ if [ "$FORCE" = 0 ] && [ -d "$DEST" ]; then
   fi
 fi
 
-# copy_tree SRC_DIR DST_DIR LIST: tar keeps executable bits and dotfiles
+# copy_tree SRC_DIR DST_DIR LIST: tar keeps executable bits and dotfiles. COPYING turns on once
+# the folder exists: a mkdir that fails (unwritable parent) has written nothing to finish by rerunning.
 copy_tree() {
   mkdir -p "$2"
+  COPYING=1
   tar -C "$1" -cf - -T <(printf '%s\n' "$3") | tar -C "$2" -xpf -
 }
 
 # a failure partway through leaves a mix of old and new files; rerunning the install completes it
-COPYING=1
+COPYING=0
 trap '[ "$?" = 0 ] || [ "$COPYING" != 1 ] || echo "install failed partway: rerun the same ./install.sh command with --force to finish it" >&2' EXIT
 copy_tree "$KIT" "$DEST" "$COPY_LIST"
+cp "$KIT/claude-project.md" "$DEST/CLAUDE.md"
 while IFS= read -r s; do
   copy_tree "$KIT/claude-skills/$s" "$SKILLS_DEST/$s" "$(list_files "$KIT/claude-skills/$s")"
 done <<<"$SKILLS"
 COPYING=0
+# project.json names the project; written once, since the project owns it afterwards
+if [ ! -e "$DEST/project.json" ]; then
+  printf '{"slug": "%s", "media": []}\n' "$SLUG" > "$DEST/project.json"
+  PROJECT_NOTE="written (slug $SLUG)"
+else
+  PROJECT_NOTE="kept (already in the project)"
+fi
 # the project's Claude Code settings: written once, never overwritten, since the project may add its own
 SETTINGS="$DEST/.claude/settings.json"
 if [ ! -e "$SETTINGS" ]; then
@@ -150,8 +175,8 @@ elif grep -q '"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS" *: *"1"' "$SETTINGS"; then
 else
   SETTINGS_NOTE="kept, but agent teams are not on: add the \"env\" entry from $KIT/claude-settings.json"
 fi
-printf 'Installed the kit into %s\n  skills: %s in %s\n  CLAUDE.md: %s/CLAUDE.md\n  .claude/settings.json: %s\n' \
-  "$DEST" "$(paste -sd ' ' - <<<"$SKILLS")" "$SKILLS_DEST" "$DEST" "$SETTINGS_NOTE"
+printf 'Installed the kit into %s\n  skills: %s in %s\n  CLAUDE.md: %s/CLAUDE.md\n  project.json: %s\n  .claude/settings.json: %s\n' \
+  "$DEST" "$(paste -sd ' ' - <<<"$SKILLS")" "$SKILLS_DEST" "$DEST" "$PROJECT_NOTE" "$SETTINGS_NOTE"
 if [ -n "$KEPT" ]; then
   printf 'Kept (already in the project, never overwritten): %s\n' "$(paste -sd ' ' - <<<"$KEPT")"
 fi
@@ -177,7 +202,7 @@ cat <<EOF
 Next steps (open a new terminal first if uv or Homebrew was just installed, so they are on PATH):
   1. cd $DEST
   2. claude
-  3. tell it you want to make a video: Claude checks the machine, runs ./setup.sh and asks the rest
-     (HUMAN.md describes what to expect; a Gemini API key is needed only for a narrated voice,
-     generated b-roll and the listening judge)
+  3. type /mediatime: Claude checks the machine, asks which medium (video, blog post or both) and
+     the rest (HUMAN.md describes what to expect; a Gemini API key is needed only for a narrated
+     voice, generated b-roll and the listening judge)
 EOF

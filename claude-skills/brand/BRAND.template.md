@@ -10,18 +10,19 @@ than deleting it. Files live in brand/: logo/, fonts/, palette/, reference/. -->
 
 ## Voice and tone
 
-[How the script reads and how the narrator sounds: formal or casual, pace, warmth, energy.
-Words and phrases the brand uses, and words it never uses. A sample sentence in the brand's voice
-helps. The narration voice: gender, age, accent, if the brand has a preference.]
+[How the prose and the script read, and how the narrator sounds in a video with narration: formal
+or casual, pace, warmth, energy. Words and phrases the brand uses, and words it never uses. A
+sample sentence in the brand's voice helps. The narration voice: gender, age, accent, if the brand
+has a preference.]
 
 ## Colours
 
-| Role       | Hex     | Notes                                        |
-| ---------- | ------- | -------------------------------------------- |
-| background | #rrggbb | [the ground most scenes sit on]              |
-| text       | #rrggbb | [body text and headings on the background]   |
-| secondary  | #rrggbb | [captions, labels, muted text]               |
-| accent     | #rrggbb | [highlights, the one colour that stands out] |
+| Role       | Hex     | Notes                                           |
+| ---------- | ------- | ----------------------------------------------- |
+| background | #rrggbb | [the ground most scenes and screenshots sit on] |
+| text       | #rrggbb | [body text and headings on the background]      |
+| secondary  | #rrggbb | [captions, labels, muted text]                  |
+| accent     | #rrggbb | [highlights, the one colour that stands out]    |
 
 [Other brand colours, one row each, with where they may and may not appear.]
 
@@ -31,11 +32,11 @@ helps. The narration voice: gender, age, accent, if the brand has a preference.]
 
 ## Typography
 
-| Role    | Family or file in brand/fonts/ | Notes                                            |
-| ------- | ------------------------------ | ------------------------------------------------ |
-| display | [family name or file]          | [titles and hero text; weights in use]           |
-| body    | [family name or file]          | [regular, bold, italic, bold italic]             |
-| mono    | [family name or file]          | [terminal captures and code; must be monospaced] |
+| Role    | Family or file in brand/fonts/ | Notes                                                         |
+| ------- | ------------------------------ | ------------------------------------------------------------- |
+| display | [family name or file]          | [titles and hero text; weights in use]                        |
+| body    | [family name or file]          | [regular, bold, italic, bold italic]                          |
+| mono    | [family name or file]          | [terminal captures, screenshots and code; must be monospaced] |
 
 <!-- A family name works when the font is installed on the machine or its files are in
 brand/fonts/<Family>/ with the licence. -->
@@ -47,25 +48,28 @@ brand/fonts/<Family>/ with the licence. -->
 - **Files**: [file names in brand/logo/]
 - **Variants**: [which file is for dark grounds, which for light grounds]
 - **Clear space**: [minimum empty margin around the logo, for example "the height of the mark"]
-- **Minimum size**: [smallest width in px at 1080p]
+- **Minimum size**: [smallest width in px at 1080p, and in CSS px on a page]
 - **Do**: [approved uses]
 - **Don't**: [stretching, recolouring, effects, rotating, placing on busy images]
 
 ## Imagery and motion feel
 
-[The visual mood: calm or energetic, minimal or rich, light or dark. How things move: easing,
-speed, transitions the brand likes or avoids. Point to files in brand/reference/.]
+[The visual mood: calm or energetic, minimal or rich, light or dark. Screenshot theme (light or
+dark), how tightly to crop, annotation style: highlight colour, callout shape and numbering. For a
+video, how things move: easing, speed, transitions the brand likes or avoids. Point to files in
+brand/reference/.]
 
 ## Music and sound feel
 
-[Genre, tempo, instruments, energy curve; sounds or styles to avoid. Reference tracks, if any.]
+[Video with music only. Genre, tempo, instruments, energy curve; sounds or styles to avoid.
+Reference tracks, if any.]
 
 ## Things to avoid
 
-[Colours, effects, words, imagery, clichés the video must not use.]
+[Colours, effects, words, imagery, clichés the video or the post must not use.]
 
 ## Legal
 
-- **Trademarks**: [trademark lines to show, and where: end card, credits]
-- **Font licences**: [each font's licence, and whether it allows embedding in video]
+- **Trademarks**: [trademark lines to show, and where: end card, credits, the post's footer, image captions]
+- **Font licences**: [each font's licence, and whether it allows embedding in video and use on the web]
 - **Other notices**: [copyright line, required disclaimers]

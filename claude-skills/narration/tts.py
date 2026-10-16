@@ -14,7 +14,7 @@ SCRIPT is a text file (or '-' for stdin) read as a verbatim transcript:
 inline tags such as <short pause> or <laugh> are performed, not spoken.
 Requires GEMINI_API_KEY (or GOOGLE_API_KEY) in the environment.
 
-Prints the call's token counts. Inside a product-video-kit project it also logs
+Prints the call's token counts. Inside a product-media-kit project it also logs
 them to the project's usage.jsonl through tools/usage_log.py, for tools/costs.py.
 """
 
@@ -128,7 +128,7 @@ def synthesize(model: str, text: str, voice: str, style: str):
 
 
 def kit_tools() -> Path | None:
-    """The tools/ folder of the video-kit project this skill is installed in, if any."""
+    """The tools/ folder of the product-media-kit project this skill is installed in, if any."""
     for parent in Path(__file__).absolute().parents:
         if (parent / "narration" / "build_timeline.py").exists():
             return parent / "tools"
