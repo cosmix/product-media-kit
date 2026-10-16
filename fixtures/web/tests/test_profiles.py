@@ -6,14 +6,15 @@ import asyncio
 import base64
 import json
 from contextlib import asynccontextmanager
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
 
-from webcap import capture, manifest
+from webcap import capture, encode, manifest
 from webcap.director import Clip, Director
 from webcap.profiles import profile
-from webcap.project import ProjectError, default_profile, media
+from webcap.project import ProjectError, default_profile, fps, media
 
 # --- profiles and project.json --------------------------------------------------
 
@@ -44,17 +45,39 @@ def test_media_rejects_a_malformed_project_json(tmp_path, data):
         media(tmp_path / "project.json")
 
 
-def test_profiles_set_scale_fps_and_encoders():
-    blog, video, both = profile("blog"), profile("video"), profile("both")
+@pytest.mark.parametrize("rate", [30, 60])
+def test_profiles_set_scale_fps_and_encoders(rate):
+    blog, video, both = profile("blog", fps=rate), profile("video", fps=rate), profile("both", fps=rate)
     assert (blog.scale, blog.fps, blog.encoders) == (1.0, 30, ("libvpx-vp9",))
-    assert (video.scale, video.fps, video.encoders) == (2.0, 60, ("libx264",))
-    assert (both.scale, both.fps, both.encoders) == (2.0, 60, ("libx264", "libvpx-vp9"))
-    draft = profile("both", draft=True)
-    assert (draft.scale, draft.fps, draft.draft) == (1.0, 60, True)
+    assert (video.scale, video.fps, video.encoders) == (2.0, rate, ("libx264",))
+    assert (both.scale, both.fps, both.encoders) == (2.0, rate, ("libx264", "libvpx-vp9"))
+    draft = profile("both", draft=True, fps=rate)
+    assert (draft.scale, draft.fps, draft.draft) == (1.0, rate, True)
     with pytest.raises(ValueError, match="--draft"):
         profile("blog", draft=True)
     with pytest.raises(ValueError, match="vhs"):
         profile("vhs")
+
+
+@pytest.mark.parametrize(("data", "rate"), [({}, 30), ({"fps": 30}, 30), ({"fps": 60}, 60)])
+def test_video_fps_follows_project_json(monkeypatch, tmp_path, data, rate):
+    monkeypatch.setattr("webcap.project.ROOT", tmp_path)
+    _project(tmp_path, {"slug": "x", "media": ["video"], **data})
+    assert fps() == rate
+    assert profile("video").fps == profile("both").fps == rate
+    assert profile("blog").fps == 30
+
+
+def test_fps_rejects_an_out_of_range_rate(tmp_path):
+    _project(tmp_path, {"fps": 0})
+    with pytest.raises(ProjectError, match="fps"):
+        fps(tmp_path / "project.json")
+
+
+@pytest.mark.parametrize(("rate", "resampled"), [(30, False), (60, True)])
+def test_derived_webm_resamples_only_a_rate_other_than_30(rate, resampled):
+    graph = encode.derived_webm_command(Path("clip.mp4"), Path("clip.webm"), rate)
+    assert ("fps=30," in " ".join(graph)) == resampled
 
 
 def test_main_takes_the_profile_from_project_json(monkeypatch, tmp_path):
@@ -103,12 +126,12 @@ def _page(boxes=None):
 
 @pytest.fixture
 def recording(tmp_path, png):
-    return lambda name, boxes=None: _recording(tmp_path, png, name, boxes)
+    return lambda name, boxes=None, rate=60: _recording(tmp_path, png, name, boxes, rate)
 
 
-def _recording(tmp_path, png, name: str, boxes=None) -> Director:
-    """A director mid-clip with a fake page, screenshot and encoder."""
-    prof = profile(name)
+def _recording(tmp_path, png, name: str, boxes=None, rate: int = 60) -> Director:
+    """A director mid-clip with a fake page, screenshot and encoder; video and both at `rate`."""
+    prof = profile(name, fps=rate)
     director = Director(_page(boxes), None, tmp_path, prof)
     director.clip = Clip("tour", tmp_path / "tour", 0)
     shot = base64.b64encode(png(round(20 * prof.scale), round(10 * prof.scale))).decode()
@@ -136,9 +159,10 @@ def test_still_writes_the_frame_with_an_origin_clip_entry(tmp_path, recording):
         asyncio.run(director.still("clip"))
 
 
+@pytest.mark.parametrize("rate", [30, 60])
 @pytest.mark.parametrize(("name", "track"), [("video", True), ("both", True), ("blog", False)])
-def test_cursor_track_and_video_fields_follow_the_profile(recording, name, track):
-    director = recording(name)
+def test_cursor_track_and_video_fields_follow_the_profile(recording, name, track, rate):
+    director = recording(name, rate=rate)
     asyncio.run(director.step())
     director.mark("open", key=True)
     asyncio.run(director.step())
@@ -157,13 +181,13 @@ def test_cursor_track_and_video_fields_follow_the_profile(recording, name, track
         assert entry["cursor"] == [{"t": 0.0, "x": 10.0, "y": 5.0, "down": False},
                                    {"t": round(1 / prof.fps, 4), "x": 10.0, "y": 5.0, "down": False}]
         assert entry["cursor_space"] == "css-20x10"
-        assert entry["fps"] == 60
+        assert entry["fps"] == rate
 
 
 def test_click_holds_and_gaps_in_seconds(recording):
     # A press lasts hold frames plus the release frame; presses are gap frames apart.
-    for name, frames in (("blog", 4 + 4 + 4), ("video", 7 + 7 + 7)):
-        director = recording(name)
+    for name, rate, frames in (("blog", 60, 4 + 4 + 4), ("video", 30, 4 + 4 + 4), ("video", 60, 7 + 7 + 7)):
+        director = recording(name, rate=rate)
         asyncio.run(director.click(count=2, hold=0.1, gap=0.12))
         assert director.clip.frames == frames
         assert director.clip.marks[-1]["event"] == "double-click"

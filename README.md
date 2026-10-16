@@ -37,6 +37,7 @@ The guides:
   - [System packages](#system-packages)
   - [Self-tests](#self-tests)
   - [Running on macOS](#running-on-macos)
+  - [Sharing a project](#sharing-a-project)
 - [The team](#the-team)
   - [Rules that make the team work](#rules-that-make-the-team-work)
   - [Good briefs](#good-briefs)
@@ -66,7 +67,7 @@ The guides:
 
 ## What you make
 
-**A video** of two to three minutes at 1920x1080 and 60 fps
+**A video** of two to three minutes at 1920x1080 and the project's frame rate (30 fps by default)
 ([guides/video.md](guides/video.md)):
 
 - a narrator (Gemini TTS) reading a script the human and the lead agent write together;
@@ -125,18 +126,21 @@ For each project:
 3. All the work happens in the project folder: the brand files, the records, the script or the
    outline, the captures, the edit, the draft and every render and build.
 
-**`project.json`** names the project and its media:
+**`project.json`** names the project, its media and the video's two saved choices:
 
 ```json
-{"slug": "acme-launch", "media": ["video", "blog"]}
+{"slug": "acme-launch", "media": ["video", "blog"], "fps": 30, "piano": "vsco"}
 ```
 
-`install.sh` writes it once, when absent, with `media` empty. The slug comes from the folder's
-name: lowercased, every run of other characters turned into one hyphen, `project` when nothing is
-left (`My_Post` gives `my-post`); the install prints a note when it differs from the name. The
-slug names every deliverable ([Outputs](#outputs)). `media` is an ordered subset of `video` and
-`blog`, filled by `/mediatime`; the capture engines and `setup.sh` read it for their defaults. The
-lead owns the file.
+`install.sh` writes it once, when absent, with `slug` and an empty `media`. The slug comes from
+the folder's name: lowercased, every run of other characters turned into one hyphen, `project`
+when nothing is left (`My_Post` gives `my-post`); the install prints a note when it differs from
+the name. The slug names every deliverable ([Outputs](#outputs)). `media` is an ordered subset of
+`video` and `blog`, filled by `/mediatime`; the capture engines and `setup.sh` read it for their
+defaults. `fps` (a whole number from 1 to 120) and `piano` (`vsco` or `salamander`) are the
+video's frame rate and piano library, saved by `./configure.sh --fps N --piano vsco|salamander`,
+which keeps the other keys ([Kickoff](#kickoff)). A reader that finds no `fps` uses 30, no `piano`
+VSCO. The lead owns the file; an edit keeps every key.
 
 **A project is a copy.** Later kit updates do not reach existing projects. To take an update, run
 the updated kit's `./install.sh <project-dir> --force`: it overwrites the engine files that have
@@ -150,7 +154,8 @@ interrupted, rerun the same command to finish it.
 
 **Each project has its own environments and samples.** `setup.sh` creates the project's Python
 environments and, for a video with music, downloads its own sample libraries into
-`music/samples/` (about 3.4 GB download, 5 GB on disk).
+`music/samples/`: VSCO-2 CE (about 2.2 GB download), plus the Salamander grand piano (1.2 GB) only
+when `project.json` selects it.
 
 ## Requirements
 
@@ -161,9 +166,9 @@ environments and, for a video with music, downloads its own sample libraries int
   Intel) or Mesa's llvmpipe, which renders on the CPU on a machine without a GPU
   ([guides/video.md](guides/video.md), "CPU-only machines"). On a Mac it is the OpenGL 4.1 that
   macOS ships. A GPU makes renders fast but is not required. The blog needs no GPU.
-- **Disk**: for the video about 25 GB free (5 GB of sample libraries plus 3.4 GB of archives
-  while `setup.sh` unpacks them, and room for renders), about 17 GB without the samples; for the
-  blog alone about 2 GB.
+- **Disk**: for the video about 25 GB free (up to 5 GB of sample libraries plus up to 3.4 GB of
+  archives while `setup.sh` unpacks them, and room for renders), about 17 GB without the samples;
+  for the blog alone about 2 GB.
 - **Optional: a Gemini API key with billing enabled**, only for a narrated voice (Gemini TTS),
   generated b-roll and the listening judge. The free tier allows only 10 TTS requests a day,
   which runs out during the first voice auditions. The blog needs no key and no paid service.
@@ -215,7 +220,7 @@ environments and, for a video with music, downloads its own sample libraries int
    | Fonts               | both  | `design.json` and the families it names (through `tools/fonts.py`), the system fonts, the terminal fallback fonts                                                                                                                 |
    | Claude Code skills  | both  | `brand`, `narration` and `mediatime` in `.claude/skills/`; a missing one means: rerun `install.sh` from the kit                                                                                                                  |
    | Brand               | both  | `BRAND.md` (WARN when absent: optional), `design.json` older than `BRAND.md` or a file in `brand/` (WARN), the logo (video)                                                                                                       |
-   | Sample libraries    | video | downloads and unpacks the libraries into `music/samples/` (resumable; `--no-samples` skips them)                                                                                                                                 |
+   | Sample libraries    | video | downloads and unpacks VSCO-2 CE, and Salamander only when `project.json` `piano` is `salamander`, into `music/samples/` (resumable; `--no-samples` skips them)                                                                    |
    | Chromium            | both  | the browser Playwright drives, installed with `playwright install chromium`                                                                                                                                                       |
    | Whisper model       | video | the model `edit/words.py` names, for narration word timings                                                                                                                                                                       |
    | API key             | video | `GEMINI_API_KEY` (WARN when not set)                                                                                                                                                                                              |
@@ -279,7 +284,7 @@ environments and, for a video with music, downloads its own sample libraries int
 ### Install into a project
 
 ```bash
-./install.sh <project-dir> [--force] [--no-system] [--setup]
+./install.sh <project-dir> [--force] [--no-system] [--setup] [--fps N --piano vsco|salamander]
 ```
 
 `install.sh` copies the kit into `<project-dir>` (created if missing; a relative path is fine, a
@@ -306,6 +311,10 @@ human's terminal (it asks for the password itself); `--no-system` skips that for
 the human has no administrator rights. `--setup` then runs `./setup.sh` in the project and
 returns its exit code. It ends by printing the next steps: `cd` into the project, start `claude`,
 type `/mediatime`.
+
+The install asks nothing. `--fps N --piano vsco|salamander`, given together, pre-answers the
+video's frame rate and piano library: the install saves them in `project.json` with
+`./configure.sh`, and `/mediatime` then reuses them. Without them `/mediatime` asks.
 
 ### System packages
 
@@ -350,7 +359,7 @@ render or a capture fails in a way that might be the machine. Each reads the pro
 | TUI capture | both   | `uv run tuicap --selftest`                       | scenario `selftest` in `captures/tui-selftest/`: still `screen` (box `prompt`) and clip `clip`; needs ffmpeg                                 |
 | postkit     | blog   | `uv run postkit selftest`                        | builds and checks a made-up post in a temporary folder it deletes; ends with `selftest: ok`                                                  |
 | motion      | video  | `uv run python render.py --selftest`             | prints `GL_RENDERER`; `out/selftest_01.50.png`, `out/selftest_contact.png` and `out/selftest.mp4` (2 s at 1920x1080, the logo if named)     |
-| edit        | video  | `uv run bg_test.py [seconds]`                    | `out/bg_test.mp4` (default 6 s at 1920x1080, 60 fps): the background and one browser-chrome window around a placeholder                     |
+| edit        | video  | `uv run bg_test.py [seconds]`                    | `out/bg_test.mp4` (default 6 s at 1920x1080, the project's frame rate): the background and one browser-chrome window around a placeholder   |
 | music       | video  | `uv run render.py --selftest`                    | `out/selftest/soundtrack.wav` and stems, 17 s of synthesized C major at -16 LUFS                                                             |
 
 ```bash
@@ -392,6 +401,44 @@ on Linux, but has not yet run on a Mac.
 - **Web captures**: Playwright's Chromium needs nothing else on macOS; `playwright install-deps`
   is for Linux only.
 - **Listening to a take**: `afplay out.wav` instead of `aplay`.
+
+### Sharing a project
+
+`export.sh` packs a project into one gzip-compressed tar archive; `inflate.sh` restores what it
+left out on the recipient's machine. Run from the project folder, or from the kit with the
+project's path:
+
+```bash
+./export.sh --output ../acme-launch.tar.gz
+./export.sh /path/to/acme-launch --output /path/to/acme-launch.tar.gz
+```
+
+The archive holds one project folder: source, settings (`project.json` with its saved choices),
+lockfiles, brand assets, the records, narration, b-roll, `captures/`, `outputs/` and every
+workstream's media. Generated and paid-for media is kept, since it cannot be regenerated safely.
+It omits what `inflate.sh` restores or a render rebuilds: Python environments, `node_modules`,
+caches, `music/samples/`, `music/build/`, `edit/build/`, `post/build/`, `captures/*-selftest/`,
+machine-specific font resolution (`brand/fonts/resolved.json`, `brand/fonts/.local/`), Git
+history and local credentials (`.env`, `.env.*` except `.env.example` and `.env.template`,
+`.aws/`). The archive path must lie outside the project and not exist yet. A symlink that points
+outside the project or nowhere stops the export: copy that asset into the project first. A
+project installed before `export.sh` existed takes the current kit with `./install.sh
+<project-dir> --force` first. The scripts run on Python 3, or on `uv` when `python3` is absent.
+
+The recipient extracts the archive and restores the dependencies:
+
+```bash
+tar -xzf acme-launch.tar.gz
+cd acme-launch
+./inflate.sh               # system-deps.sh, then setup.sh
+./inflate.sh --no-system   # setup.sh only, when the system packages are installed
+./inflate.sh --check       # report what is missing; change nothing
+```
+
+`inflate.sh` runs `./system-deps.sh` (it asks for the password) and then `./setup.sh`, which
+scopes itself from `project.json` `media` and fetches the sample libraries `piano` selects,
+Chromium and the Whisper model. `--no-samples` passes through to `setup.sh`. It needs network
+access. API keys never travel in the archive: set `GEMINI_API_KEY` on the recipient's machine.
 
 ## The team
 
@@ -475,8 +522,12 @@ skill (`.claude/skills/mediatime/SKILL.md`) runs the kickoff:
 
 1. Read `project.json` and `NOTES.md`; list the media and artefacts that exist.
 2. Ask which media (video, blog post, both) and, for both, which comes first.
-3. With a video, ask whether it has music. Check the machine for the chosen media with
-   `./setup.sh --check --for <media>`, then run `./setup.sh --for <media>` (`--no-samples`
+3. With a video, ask its frame rate (30 suggested), whether it has music and, with music, the
+   piano library: VSCO (CC0, no attribution) unless the human explicitly picks the Salamander grand
+   piano (CC BY 3.0: credited on screen and in the video description). Save both with
+   `./configure.sh --fps N --piano vsco|salamander`; answers already in `project.json` are reused.
+   A human who asks Claude to decide gets 30 fps and VSCO. Check the machine for the chosen media
+   with `./setup.sh --check --for <media>`, then run `./setup.sh --for <media>` (`--no-samples`
    without music), and loop on `./system-deps.sh` for the human until `0 MISSING`.
 4. Interview: one shared group (product, source and PRD, audience and goal, captures and theme,
    guidance, deliverables), then each medium's own group, skipping what is known.
@@ -509,8 +560,8 @@ A project that makes both media builds the shared parts once. These are shared b
   never drops what another run captured ([guides/capture.md, "Manifests"](guides/capture.md#manifests)).
 
 **Capture once for both.** With both media in `project.json`, captures default to `--for both`:
-one recording at the video's scale 2 and 60 fps gives `clip.mp4` for the edit, and the WebM and
-GIF for the post are derived from it. `SHOTS` stills are scale 2 in every profile, so the same PNG
+one recording at the video's scale 2 and the project's frame rate gives `clip.mp4` for the edit,
+and the post's 30 fps WebM and GIF are derived from it. `SHOTS` stills are scale 2 in every profile, so the same PNG
 serves both. A project that captured for the video alone and then adds the post recaptures the
 clips it needs with `--for both`; under the video profile a clip's manifest `file` is its poster
 PNG and there is no GIF.
@@ -603,8 +654,8 @@ file.
 
 | Folder                                       | Medium | Engine (in the kit)                                                                                                                                                                                                                                            | Files the project writes                                                                                                                                                                                                 |
 | -------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| project root                                 | both   | `README.md`, `HUMAN.md`, `CLAUDE.md`, `guides/`, `setup.sh`, `system-deps.sh`, `.gitignore`; `project.json` (written once by `install.sh`)                                                                                                                      | `BRAND.md`, `brand/`, `design.json` ([Brand](#brand)); `NOTES.md`, `HANDBOOK.md`, `claims.md`, `scenarios.md` ([Project records](#project-records)); video: `rates.json`, `COSTS.md` (generated from `usage.jsonl`)       |
-| `tools/`                                     | both   | `fonts.py` (finds the files for fonts `design.json` names by family); video: `listen.py` (the listening judge), `genvideo.py` (Gemini Omni b-roll), `usage_log.py`, `costs.py` (writes `COSTS.md`)                                                             | none                                                                                                                                                                                                                     |
+| project root                                 | both   | `README.md`, `HUMAN.md`, `CLAUDE.md`, `guides/`, `setup.sh`, `system-deps.sh`, `configure.sh`, `export.sh`, `inflate.sh`, `LICENSE`, `.gitignore`; `project.json` (written once by `install.sh`)                                                               | `BRAND.md`, `brand/`, `design.json` ([Brand](#brand)); `NOTES.md`, `HANDBOOK.md`, `claims.md`, `scenarios.md` ([Project records](#project-records)); video: `rates.json`, `COSTS.md` (generated from `usage.jsonl`)       |
+| `tools/`                                     | both   | `fonts.py` (finds the files for fonts `design.json` names by family), `project_settings.py` (`configure.sh`), `export_project.py` (`export.sh`); video: `setup-samples.sh` (sourced by `setup.sh`), `listen.py` (the listening judge), `genvideo.py` (Gemini Omni b-roll), `usage_log.py`, `costs.py` (writes `COSTS.md`) | none                                                                                                                                                                                                                     |
 | `claude-skills/` (in a project `.claude/skills/`) | both   | `brand/` (`SKILL.md`, `BRAND.template.md`, `check.py`), `mediatime/` (`SKILL.md`); video: `narration/` (`SKILL.md`, `tts.py`)                                                                                                                                 | none                                                                                                                                                                                                                     |
 | `fixtures/web/`                              | both   | `webcap/`: `capture` (the command), `project` (loads `product.py`, mock or live), `profiles`, `shots` (`Shooter`), `director` (frame stepping), `browser`, `boxes`, `encode`, `media`, `manifest`, `names`, `page_script`, `server`, `world` (scripted clock), `probe`, `verify`, `selftest`, `agent_session` and `ansi` (a scripted coding-agent terminal) | `product.py`: `SHOTS` and/or `CLIPS`, optional `CLIP_PATHS`, `VIEWPORT`, `THEME`, `LOCAL_STORAGE`, `FONT_PROBES`; mock mode `World` and `build_app`; live mode `BASE_URL`; plus fixture data ([guides/capture.md](guides/capture.md)) |
 | `fixtures/tui/`                              | both   | `src/tuicap/`: `clips` (the `tuicap` command), `capture` (pty recording, typed-command shots), `render` (pyte and skia), `shots` (`Still`), `encode`, `fonts`, `manifest`, `design`, `palette`, `glyphs`, `tmux_clip`                                            | `product.py`: `SHOTS` and/or `CLIPS`, optional `prepare()`, `TRUECOLOR`, `NOTES`; plus fixture files ([guides/capture.md](guides/capture.md))                                                                             |
@@ -1154,9 +1205,11 @@ What went wrong in finished projects, for both media. Each medium guide and
   `BRAND.md`, "Legal", asks.
 - **Screenshots and clips**: images of the product, owned by the product's owner; the fixture
   story holds no real customer data.
-- **Music samples** (video): Salamander Grand Piano V3 (Alexander Holm, CC BY 3.0, credited on
-  screen) and VSCO 2 Community Edition (Versilian Studios, CC0 1.0, no attribution needed),
-  downloaded by `setup.sh` unless it runs with `--no-samples`. `music/CREDITS.md` records
+- **Music samples** (video): VSCO 2 Community Edition (Versilian Studios, CC0 1.0, no
+  attribution needed), the default, piano included; Salamander Grand Piano V3 (Alexander Holm, CC
+  BY 3.0, credited on screen and in the video description) only when `project.json` `piano` is
+  `salamander`, which takes the human's explicit consent. `setup.sh` downloads the selected
+  libraries unless it runs with `--no-samples`. `music/CREDITS.md` records
   sources, files, licences and which instruments each library supplies; everything else in the
   score is synthesized.
 - **B-roll** (video): generated with Gemini Omni; no attribution required. `broll/CREDITS.md`

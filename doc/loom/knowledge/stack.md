@@ -22,7 +22,7 @@ Each folder is its own uv project with a committed `uv.lock` (run with `uv run -
 - Playwright's Chromium (`setup.sh` installs it), tmux (`tmux_clip.py`), `fc-list` and `fc-match` (`tuicap/fonts.py`, `tools/fonts.py`, `postkit/design.py`), `xz` and `unzip` (sample archives), Mesa EGL on machines without a GPU driver.
 - tuicap fallback fonts are looked up by family through fontconfig (DejaVu Sans Mono, Noto Sans Symbols2, Noto Sans Symbols, Noto Sans Math, Noto Color Emoji on Linux; Menlo, Apple Symbols, Apple Color Emoji on macOS).
 - External services: Gemini (`GEMINI_API_KEY`) for narration (TTS), generated b-roll (Omni) and the listening judge; billed per request and estimated in `<project>/COSTS.md`.
-- Sample libraries (Salamander Grand Piano, VSCO-2 CE) are fetched by `setup.sh` into `music/samples/`.
+- Sample libraries are fetched by `setup.sh` into `music/samples/`: VSCO-2 CE always, Salamander Grand Piano only when `project.json` `piano` is `salamander`.
 
 ## Kit scripts
 

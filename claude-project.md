@@ -7,7 +7,8 @@ workstreams; when this file and the README differ, the README wins. `HUMAN.md` i
 guide, not yours.
 
 The human only ran `./install.sh` and started `claude`. Everything else is your job, starting with
-whatever they say first. `project.json` holds the project's slug and its media.
+whatever they say first. `project.json` holds the project's slug, its media and, for a video, the
+saved frame rate (`fps`) and piano library (`piano`).
 
 ## First session (no `NOTES.md`, or `media` empty in `project.json`)
 
@@ -112,6 +113,13 @@ particular), then the sections for its role before starting:
 
 ### Video
 
+- `project.json` `fps` and `piano` are the human's choices, saved by `./configure.sh --fps N
+  --piano vsco|salamander` (the `mediatime` skill asks them); reuse them when resuming. Captures,
+  motion graphics and the master render at `fps` (default 30): leave `FPS` out of `edit/edl.py`
+  and `--fps` off `motion/render.py` unless the human asks for an override. Where another
+  instruction names 60 fps, the saved rate wins. VSCO is the piano unless the human explicitly
+  chose Salamander, which needs credit on screen and in the description; never download or use
+  Salamander without that choice. A human who delegates the choice gets 30 fps and VSCO.
 - `narration/timeline.json` is the only clock, built by `narration/build_timeline.py` with or
   without narration (silent sections are timed by `duration` or their on-screen `text`). Read it;
   never use a time from a message. When it changes, send absolute windows, not deltas.
@@ -145,7 +153,12 @@ Kickoff and setup (README "Setup"):
 ```bash
 ./setup.sh --check
 ./setup.sh --for blog
+./configure.sh --fps 30 --piano vsco               # the video's saved choices
 ```
+
+Sharing (README "Sharing a project"): `./export.sh --output ../<slug>.tar.gz` writes an archive
+with the media and without restorable dependencies; the recipient runs `./inflate.sh`. API keys
+never go in the archive.
 
 Capture from each engine's folder (`guides/capture.md`):
 

@@ -12,3 +12,4 @@ dev = [
 
 [tool.pytest.ini_options]
 testpaths = ["."]
+pythonpath = [".."]  # the kit root, for tools/

@@ -21,7 +21,7 @@ The kit ships the engines; each project writes one product module per harness (`
 
 ## Capture profiles
 
-`--for video|blog|both` selects scale, frame rate and files in both engines: blog (scale 1, 30 fps, WebM and GIF), video (scale 2, 60 fps, mp4 and cursor track), both (record the mp4, derive WebM and GIF). SHOTS stills are 2x in every profile. The default comes from `project.json` `media`.
+`--for video|blog|both` selects scale, frame rate and files in both engines: blog (scale 1, 30 fps, WebM and GIF), video (scale 2, the project's `fps` from `project.json`, default 30, mp4 and cursor track), both (record the mp4, derive WebM and GIF). SHOTS stills are 2x in every profile. The default comes from `project.json` `media`.
 
 ## Merge, never overwrite, in the manifests
 

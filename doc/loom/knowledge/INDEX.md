@@ -24,7 +24,7 @@
 | --- | --- | --- |
 | [brand-and-design](architecture/brand-and-design.md) | design.json schema and its loaders, tools/fonts.py, brand skill, check.py | 25 |
 | [edit](architecture/edit.md) | compositor, EDL asset refs, outputs naming, render, subs, credits and share copy | 24 |
-| [kit-plumbing](architecture/kit-plumbing.md) | install.sh, setup.sh, system-deps.sh, settings, installed folder map | 34 |
+| [kit-plumbing](architecture/kit-plumbing.md) | install.sh, setup.sh, system-deps.sh, configure/export/inflate, settings… | 43 |
 | [motion](architecture/motion.md) | motion graphics renderer: scene modules, lib, encode, logo, manifest | 17 |
 | [music](architecture/music.md) | scorekit: sample libraries, score, instruments, mix, qc, render | 14 |
 | [narration](architecture/narration.md) | timeline.json the only clock, tts skill, listening judge, costs.py and… | 19 |

@@ -17,7 +17,11 @@ BK is deleted after the merge passes its gate.
 | BK material | Knowledge base and tests come over, adapted; BK's git history does not |
 | Execution | This session, with subagents; no loom plan |
 | Project instructions | Kept in the kit as `claude-project.md`, copied to `<project>/CLAUDE.md` by `install.sh`; the kit root's `CLAUDE.md` is deleted so kit-development sessions never load the lead's instructions |
-| Project file | `project.json` `{"slug": "<slug>", "media": []}`, written by `install.sh` only when absent. Slug derived from the folder name (lowercase, non-alphanumerics to `-`, `project` when empty), never a failure. `media` is an ordered subset of `["video", "blog"]`, filled by `/mediatime` |
+| Project file | `project.json` `{"slug", "media", "fps", "piano"}`. `install.sh` writes `{"slug": "<slug>", "media": []}` only when absent and never clobbers it. Slug derived from the folder name (lowercase, non-alphanumerics to `-`, `project` when empty), never a failure. `media` is an ordered subset of `["video", "blog"]`, filled by `/mediatime`. `fps` and `piano` are saved by `./configure.sh`, which keeps every other key |
+| Frame rate | `project.json` `fps` (int 1-120, default 30 when absent) is the rate of video captures, motion and the master. `edit/edl.py` omits `FPS` and motion omits `--fps` unless the human asks for an override. A saved rate wins over any 60 fps in other instructions |
+| Piano | `project.json` `piano`: `vsco` (CC0, default) or `salamander` (CC BY 3.0, credited on screen and in the description). Salamander is never downloaded or used without the human's explicit choice; `setup.sh` fetches it only when selected; the music manifest's `sample_libraries` gates its credit |
+| Startup choices | `/mediatime` asks the frame rate (suggest 30) and, with music, the piano, and saves them with `./configure.sh --fps N --piano X`. `install.sh` never prompts; `--fps N --piano X` (both together) pre-answers. A delegated choice is 30 fps and VSCO. The kit-root `.claude/` is not installed, so these rules live in `claude-project.md`, the mediatime skill and `guides/video.md` |
+| Sharing | `export.sh` (`tools/export_project.py`) writes a tar.gz keeping source, media, `captures/` and `outputs/`, omitting environments, caches, `music/samples`, `music/build`, `edit/build`, `post/build`, `captures/*-selftest`, font resolution, Git history and credentials. `inflate.sh` runs `system-deps.sh` then `setup.sh`. Both ship to projects; README "Sharing a project" and HUMAN.md document them |
 | Outputs | Video files flat in `outputs/`; the blog in `outputs/blog/` with `outputs/blog/images/`. Names below |
 | Revisions | Allocated by scanning `outputs/`; no counter. Tools rewrite the latest revision of their stage by default; `--next` writes max+1; `--revision vN` names one |
 | Blog images | One `outputs/blog/images/` shared by all revisions; a rebuild replaces images in place |
@@ -37,12 +41,14 @@ BK is deleted after the merge passes its gate.
 ### `project.json`
 
 ```json
-{"slug": "acme-launch", "media": ["video", "blog"]}
+{"slug": "acme-launch", "media": ["video", "blog"], "fps": 30, "piano": "vsco"}
 ```
 
-Readers: `edit` (render, subs, credits), `post` (postkit), `fixtures/web`, `fixtures/tui` (default
-profile and viewport), `setup.sh` (scope; parsed with grep/sed). Writers: `install.sh` (create
-only), the lead through `/mediatime`.
+Readers: `edit` (render, subs, credits; fps), `post` (postkit), `fixtures/web`, `fixtures/tui`
+(default profile, viewport, video fps), `motion` (fps), `music` (piano), `setup.sh` (scope parsed
+with grep/sed; piano through `configure.sh --get piano`). `fps` and `piano` are read through
+`tools/project_settings.read` (defaults 30 and `vsco`). Writers: `install.sh` (create only), the
+lead through `/mediatime`, `configure.sh` (`fps`, `piano`; keeps the other keys).
 
 ### Output names
 
@@ -80,7 +86,7 @@ BK's format, extended. Paths relative to `captures/<source>/`; written atomicall
     "width": 2880, "height": 1800, "scale": 2.0, "boxes": {"save": [0, 0, 10, 10]}},
    {"id": "settings/clip", "kind": "clip", "origin": "clip", "file": "settings/clip.gif",
     "webm": "settings/clip.webm", "poster": "settings/clip.png", "video": "settings/clip.mp4",
-    "width": 3840, "height": 2160, "scale": 2.0, "fps": 60, "duration": 4.5, "boxes": {},
+    "width": 3840, "height": 2160, "scale": 2.0, "fps": 30, "duration": 4.5, "boxes": {},
     "marks": [{"t": 1.2, "event": "open", "key": true}],
     "cursor": [{"t": 0.0, "x": 100, "y": 200, "down": false}], "cursor_space": "css-1920x1080"}]}
 ```
@@ -99,8 +105,8 @@ Layout: `captures/<source>/<scenario>/<label>.png`, `captures/<source>/<scenario
 | Profile | Scale | FPS | Files |
 | --- | --- | --- | --- |
 | `blog` | 1 | 30 | `clip.webm` (VP9), `clip.gif` (15 fps, max 960 px), `clip.png` poster |
-| `video` | 2 | 60 | `clip.mp4` (H.264 crf 10 yuv420p bt709, VK's args), poster, cursor track |
-| `both` | 2 | 60 | capture once as `video`, then derive WebM and GIF from the mp4 (`fps=30`, scale x0.5) |
+| `video` | 2 | project `fps` | `clip.mp4` (H.264 crf 10 yuv420p bt709, VK's args), poster, cursor track |
+| `both` | 2 | project `fps` | capture once as `video`, then derive WebM and GIF from the mp4 (30 fps, resampled only when the project rate differs; scale x0.5) |
 
 `--draft` (video): scale 1, `ultrafast`, crf 23. Click hold and gap times are given in seconds.
 
@@ -147,6 +153,8 @@ frame treatment for these sources is `none`.
 Whisper and Gemini WARNs. Blog-only: `post` env; ffmpeg WARN "clips only". Shared: uv, curl, tar,
 rg, tmux, claude, `fixtures/web` and `fixtures/tui` envs, fonts and fallback fonts, brand, skills,
 Chromium. libvpx-vp9 is checked from captured output, never `grep -q` under pipefail.
+Sample libraries (video scope only, `tools/setup-samples.sh`): VSCO-2 CE always, Salamander only
+when `piano` is `salamander`. `setup.sh` never prompts.
 `system-deps.sh` installs the union by default (VK table plus BK's Fedora Noto split);
 `--for blog` skips Mesa, xz, unzip and uses `ffmpeg-free` on Fedora.
 
@@ -154,8 +162,10 @@ Chromium. libvpx-vp9 is checked from captured output, never `grep -q` under pipe
 
 1. Read `project.json` and `NOTES.md`; list existing media and artefacts.
 2. Ask which media (video, blog, both) and, for both, the order.
-3. Ask about music when video is chosen; run `./setup.sh --check --for X`, then `./setup.sh --for X`
-   (`--no-samples` without music); loop on `system-deps.sh` for the human until `0 MISSING`.
+3. With video: ask the frame rate (suggest 30), music and, with music, the piano (VSCO unless the
+   human explicitly picks Salamander); save with `./configure.sh --fps N --piano X`. Then run
+   `./setup.sh --check --for X`, then `./setup.sh --for X` (`--no-samples` without music); loop on
+   `system-deps.sh` for the human until `0 MISSING`.
 4. One shared interview group (product, source and PRD, audience and goal, captures and theme,
    guidance, deliverables), then each medium's own group (VK `CLAUDE.md` b; BK
    `claude-project.md` b), skipping what is known.
@@ -173,7 +183,7 @@ whatever the human says first; a later session asking for the other medium rerun
 ## README section map (pinned so the guide writers agree)
 
 `README.md`: What you make; How the kit is used; Requirements; Setup (Install into a project,
-System packages, Self-tests, Running on macOS); The team (rules 1-11, Good briefs); Kickoff
+System packages, Self-tests, Running on macOS, Sharing a project); The team (rules 1-11, Good briefs); Kickoff
 (`/mediatime`); Reuse between media; Pipeline and folder map; Engine and project files; Code that
 needs your product; Outputs; Brand (`BRAND.md` and `brand/`, The brand skill, The checker);
 Design system (`design.json`, Fonts by family, Who reads what, Legibility); Editorial rules;
@@ -206,7 +216,8 @@ Write sets are disjoint. "Import" means copy the BK file into this repo, then ad
 Acceptance per package:
 
 1. `cd fixtures/web && uv run --frozen pytest && uv run --frozen ruff check .`; selftests
-   `--for blog` and `--for both` into a scratch dir; ffprobe reports 60 fps for `clip.mp4`;
+   `--for blog` and `--for both` into a scratch dir; ffprobe reports the project fps (30 without
+   `project.json`) for `clip.mp4`;
    `clip.gif` exists; numpy in the dependencies.
 2. `cd fixtures/tui && uv run --frozen pytest && uv run --frozen ruff check .`;
    `uv run --frozen tuicap --selftest --for both --out <scratch>`; manifest `scale` 2.0.

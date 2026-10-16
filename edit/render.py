@@ -11,7 +11,7 @@
 
 N is the latest revision of the stage's mp4 (1 when none); --next starts the following one for a new
 full render or preview, --revision vN picks one. Range, contact and share attach to the latest mp4.
-The frame rate is edl.py's FPS (default 60).
+The frame rate is edl.py's FPS, else project.json's fps (default 30).
 """
 
 
@@ -27,7 +27,7 @@ from PIL import Image, ImageDraw
 
 from editkit import assets
 from editkit.art import font
-from editkit.compositor import PREVIEW, Compositor, Quality
+from editkit.compositor import PREVIEW, Compositor, Quality, project_fps
 from editkit.decode import probe
 from editkit.hw import fast_h264
 from editkit.outputs import latest_revision, output_path, read_slug, revision_arg
@@ -173,7 +173,7 @@ def main() -> None:
     OUT.mkdir(exist_ok=True)
     if not (a.frames or a.contact or a.allow_placeholders):
         require_real_assets()
-    fps = int(getattr(edl(), "FPS", 60))
+    fps = int(getattr(edl(), "FPS", project_fps()))
     q = dataclasses.replace(PREVIEW, fps=min(30, fps)) if a.preview else Quality(fps=fps)
     total = edl().END
     start, end = a.range if a.range else (0.0, total)

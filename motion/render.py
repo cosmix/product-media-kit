@@ -14,7 +14,10 @@ import sys
 import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, os.path.dirname(HERE))  # the project root, for tools/
 sys.path.insert(0, HERE)
+
+from tools.project_settings import read as project_settings
 
 from lib import gfx
 from lib.encode import Writer, contact_sheet, save_png
@@ -120,7 +123,7 @@ def parse():
                     help="the scene's default, plus the transparent variant when the default is opaque")
     ap.add_argument("--contact", action="store_true", help="only render a 9-frame contact sheet")
     ap.add_argument("--still", type=float, default=None, help="render one PNG at time t")
-    ap.add_argument("--fps", type=int, default=60)
+    ap.add_argument("--fps", type=int, default=project_settings()["fps"])
     ap.add_argument("--suffix", default="")
     ap.add_argument("--over", default=None, help="composite --still over this hex colour")
     ap.add_argument("--handle", type=float, default=0.0, help="seconds of hold added before and after the scene window")

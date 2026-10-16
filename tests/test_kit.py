@@ -141,9 +141,16 @@ def test_system_deps_rejects_unknown_medium() -> None:
     assert system_deps_dry_run("--for", "audio").returncode == 2
 
 
+def copy_setup(root: Path) -> None:
+    """setup.sh and the sample code it sources, into root."""
+    (root / "tools").mkdir(parents=True, exist_ok=True)
+    for name in ("setup.sh", "tools/setup-samples.sh"):
+        shutil.copy2(KIT / name, root / name)
+
+
 def source_setup(root: Path, args: str, call: str) -> subprocess.CompletedProcess:
     """Source a copy of setup.sh in root with ARGS, run CALL; sourcing keeps main from running."""
-    shutil.copy2(KIT / "setup.sh", root / "setup.sh")
+    copy_setup(root)
     return subprocess.run(
         # $0 is "setup.sh", so the script's ROOT (the folder of $0) is cwd
         [BASH, "-c", f"source ./setup.sh {args}; set +e; {call}", "setup.sh"],
@@ -220,7 +227,7 @@ def test_setup_brand_newer_ignores_tools_fonts_output(tmp_path: Path) -> None:
     root = tmp_path / "project"
     fonts = root / "brand" / "fonts"
     (fonts / ".local").mkdir(parents=True)
-    shutil.copy2(KIT / "setup.sh", root / "setup.sh")
+    copy_setup(root)
     asset = fonts / "Body-Regular.ttf"
     for path in (root / "BRAND.md", asset):
         path.write_text("brand\n")

@@ -310,11 +310,11 @@ def _write_frames(rec: Recording, renderer: TerminalRenderer, sink, frames: int,
 
 
 def _encode(rec: Recording, renderer: TerminalRenderer, tmp: dict[str, Path], profile: str,
-            draft: bool, frames: int) -> None:
+            draft: bool, frames: int, fps: int) -> None:
     """Write the profile's files under their temporary names (keys are the extensions)."""
-    proc = encoder(tmp["mp4" if uses_mp4(profile) else "webm"], *renderer.geo.size, profile, draft)
+    proc = encoder(tmp["mp4" if uses_mp4(profile) else "webm"], *renderer.geo.size, profile, fps, draft)
     try:
-        _write_frames(rec, renderer, proc.stdin, frames, fps_for(profile))
+        _write_frames(rec, renderer, proc.stdin, frames, fps)
         proc.stdin.close()
         if proc.wait() != 0:
             raise RuntimeError("ffmpeg failed while encoding the clip")
@@ -324,7 +324,7 @@ def _encode(rec: Recording, renderer: TerminalRenderer, tmp: dict[str, Path], pr
         proc.wait()
         raise
     if profile == "both":
-        webm_from_mp4(tmp["mp4"], tmp["webm"])
+        webm_from_mp4(tmp["mp4"], tmp["webm"], fps)
     if profile != "video":
         gif_from_webm(tmp["webm"], tmp["gif"])
 
@@ -333,7 +333,7 @@ def render_recording(rec: Recording, out_dir: Path, label: str, profile: str = "
                      draft: bool = False) -> dict:
     """Write the profile's files for <label> into out_dir and return the clip manifest entry
     fields (paths relative to out_dir). blog: .webm (30 fps), .gif, .png poster (the last frame).
-    video: .mp4 (60 fps) and .png; `file` is then the poster. both: the mp4, plus the WebM
+    video: .mp4 (project.json fps, default 30) and .png; `file` is then the poster. both: the mp4, plus the WebM
     and GIF derived from it. `draft` encodes the mp4 fast at crf 23. A failure leaves no partial files."""
     if profile not in PROFILES:
         raise ValueError(f"profile {profile!r}: expected one of {', '.join(PROFILES)}")
@@ -345,7 +345,7 @@ def render_recording(rec: Recording, out_dir: Path, label: str, profile: str = "
     fps = fps_for(profile)
     frames = max(1, round(rec.duration * fps))
     try:
-        _encode(rec, renderer, tmp, profile, draft, frames)
+        _encode(rec, renderer, tmp, profile, draft, frames, fps)
         for ext, path in tmp.items():
             path.replace(out_dir / f"{label}.{ext}")
     except BaseException:

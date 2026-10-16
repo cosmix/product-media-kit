@@ -1,6 +1,6 @@
 ---
 name: mediatime
-description: Kick off a product media project, or add a medium to one. Asks which media to make (a video, a blog post or both), checks the machine with setup.sh, interviews the human, sets up the Gemini key and the brand, and writes project.json, NOTES.md, rates.json and the reuse inventory before Phase 1. Use on "/mediatime", "let's make a video", "write a blog post", "let's write the post", "start the project", on the first session of a project, and when the human asks for the other medium ("now a blog post too", "make a video from this post").
+description: Kick off a product media project, or add a medium to one. Asks which media to make (a video, a blog post or both), saves a video's frame rate and piano with configure.sh, checks the machine with setup.sh, interviews the human, sets up the Gemini key and the brand, and writes project.json, NOTES.md, rates.json and the reuse inventory before Phase 1. Use on "/mediatime", "let's make a video", "write a blog post", "let's write the post", "start the project", on the first session of a project, and when the human asks for the other medium ("now a blog post too", "make a video from this post").
 ---
 
 # Mediatime
@@ -13,7 +13,8 @@ records already answered.
 
 ## 1. Read what exists
 
-Read `project.json` (`{"slug": ..., "media": [...]}`) and `NOTES.md` if present. List what the
+Read `project.json` (`{"slug": ..., "media": [...], "fps": ..., "piano": ...}`; `fps` and `piano`
+are absent until saved) and `NOTES.md` if present. List what the
 project already holds, with your file tools:
 
 ```text
@@ -35,11 +36,28 @@ Ask what to make: a video, a blog post, or both. For both, ask which comes first
 reuses what the first produced. When the project already has a medium, ask only whether to add
 the other. Out of scope from here on: a medium not chosen gets no question, no check, no role.
 
-## 3. Check the machine
+## 3. Video choices, then check the machine
 
-With a video, first ask whether it will have music: the sample libraries are a 3.4 GB download
-needed only for a score with sampled instruments. Then, with `<media>` as `video`, `blog` or
-`both`:
+With a video, ask these together, before any download or render. Answers already saved in
+`project.json` (`fps`, `piano`) stand; reuse them without asking.
+
+- **Frame rate**: suggest 30 fps; any whole number from 1 to 120. It applies to the captures,
+  motion graphics and the master.
+- **Music**: whether the video has music. The sample libraries are needed only for a score with
+  sampled instruments: VSCO-2 CE, about 2.2 GB.
+- **Piano**, only with music: VSCO's upright (CC0, no attribution), unless the human explicitly
+  picks the Salamander grand piano. Explain its duty first: CC BY 3.0, credited on screen and in
+  the video description; 1.2 GB more to download. Never select or download Salamander without
+  that explicit choice.
+
+Save them before the setup run: `./configure.sh --fps <N> --piano <vsco|salamander>`. A video
+without music saves `--piano vsco`. If the human asks you to decide, save 30 fps and VSCO. Record
+the choices in `NOTES.md` (step 7). `project.json` is the source of truth for both from here on:
+where another instruction names 60 fps, the saved rate wins. To change them later, rerun
+`./configure.sh` (it keeps `slug` and `media`), then `./setup.sh` for a new piano, and rerender
+what the change touches.
+
+Then, with `<media>` as `video`, `blog` or `both`:
 
 1. Run `./setup.sh --check --for <media>`.
 2. Run `./setup.sh --for <media>`, with `--no-samples` when the video has no music or the human is
@@ -78,8 +96,7 @@ line and ask only the new medium's group.
 **Video group:**
 
 - **Length and format**: about two minutes by default (the kit makes two to three); 1920x1080 at
-  60 fps unless they want otherwise; whether they also want the smaller share copy for social
-  media.
+  the frame rate saved in step 3; whether they also want the smaller share copy for social media.
 - **Narration, music, b-roll**: each optional, any combination or none. A choice not made is out
   of scope: no role, no brief, no questions about it.
   - Narration: the narrator's character and the tone of voice they want (warm and confident,
@@ -138,8 +155,9 @@ needs no key.
 All of these are lead-owned files; write them yourself with the Edit or Write tool.
 
 - **`project.json`**: set `media` to the chosen media in the agreed order (`["video", "blog"]`,
-  `["blog"]`, ...), keeping `slug` as `install.sh` wrote it. Adding a medium appends it. The
-  capture engines and `setup.sh` read it for their defaults.
+  `["blog"]`, ...), keeping `slug` as `install.sh` wrote it and `fps` and `piano` as
+  `./configure.sh` saved them. Adding a medium appends it. The capture engines and `setup.sh` read
+  it for their defaults.
 - **`NOTES.md`**: the decision log (README "`NOTES.md`: the decision log"). A "Kickoff" section
   with the shared decisions, then one block per medium, then the "Rejected styles" list seeded
   from `BRAND.md`, "Things to avoid". When adding a medium, append its block; change nothing above.

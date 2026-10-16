@@ -4,7 +4,7 @@
     uv run tuicap settings other        # just those, keeping the rest of manifest.json
                                         # (a scenario's clip entry survives a stills-only run)
     uv run tuicap --clips               # also render each CLIPS scenario as <scenario>/clip
-    uv run tuicap --clips --for video   # clip.mp4 at 60 fps and the poster (blog: WebM + GIF + poster;
+    uv run tuicap --clips --for video   # clip.mp4 at project.json fps and the poster (blog: WebM + GIF + poster;
                                         # both: the mp4, then the WebM and GIF derived from it)
     uv run tuicap --clips --draft       # a fast, lower quality mp4 for previews
     uv run tuicap --selftest            # render a canned terminal; needs no product

@@ -1,5 +1,5 @@
-"""The capture profiles: video and both render an MP4 at 60 fps, blog a WebM; every entry
-reports scale 2.0 and an origin; project.json picks the default profile."""
+"""The capture profiles: video and both render an MP4 at project.json's fps (default 30), blog a
+WebM at 30 fps; every entry reports scale 2.0 and an origin; project.json picks the default profile."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ import types
 
 import pytest
 
-from tuicap import clips
+from tuicap import clips, encode
 from tuicap.capture import prompt, synth_cli
 from tuicap.encode import encoder, fps_for
 from tuicap.render import render_recording
@@ -34,16 +34,29 @@ def _probe(path, entries="stream=r_frame_rate,codec_name"):
     return json.loads(out)["streams"][0]
 
 
-@pytest.mark.parametrize(("profile", "fps"), [("blog", 30), ("video", 60), ("both", 60)])
-def test_fps_per_profile(profile, fps):
-    assert fps_for(profile) == fps
+@pytest.fixture
+def project_fps(tmp_path_factory, monkeypatch):
+    """Set the project root's project.json fps (None: no project.json) for the encoders."""
+    def set_fps(rate):
+        root = tmp_path_factory.mktemp("project")
+        if rate is not None:
+            (root / "project.json").write_text(json.dumps({"slug": "x", "media": ["video"], "fps": rate}))
+        monkeypatch.setattr(encode, "ROOT", root)
+    return set_fps
+
+
+@pytest.mark.parametrize(("rate", "video"), [(None, 30), (30, 30), (60, 60)])
+@pytest.mark.parametrize("profile", ["blog", "video", "both"])
+def test_fps_per_profile(project_fps, profile, rate, video):
+    project_fps(rate)
+    assert fps_for(profile) == (30 if profile == "blog" else video)
 
 
 def test_encoder_draft_is_fast_and_low_quality(monkeypatch):
     seen = []
     monkeypatch.setattr(subprocess, "Popen", lambda cmd, **kw: seen.append(cmd))
-    encoder("o.mp4", 10, 10, "video", draft=True)
-    encoder("o.mp4", 10, 10, "video")
+    encoder("o.mp4", 10, 10, "video", 60, draft=True)
+    encoder("o.mp4", 10, 10, "video", 60)
     assert seen[0][seen[0].index("-preset") + 1] == "ultrafast"
     assert seen[0][seen[0].index("-crf") + 1] == "23"
     assert (seen[1][seen[1].index("-preset") + 1], seen[1][seen[1].index("-crf") + 1]) == ("slow", "10")
@@ -56,25 +69,29 @@ def test_render_recording_rejects_an_unknown_profile(tmp_path):
 
 
 @needs_h264
-def test_video_profile_writes_a_60_fps_mp4_and_a_poster(tmp_path):
+@pytest.mark.parametrize("rate", [30, 60])
+def test_video_profile_writes_an_mp4_at_the_project_fps_and_a_poster(tmp_path, project_fps, rate):
+    project_fps(rate)
     rec, _ = _short_rec()
     entry = render_recording(rec, tmp_path, "clip", "video")
     assert sorted(p.name for p in tmp_path.iterdir()) == ["clip.mp4", "clip.png"]
     stream = _probe(tmp_path / "clip.mp4")
-    assert (stream["codec_name"], stream["r_frame_rate"]) == ("h264", "60/1")
-    assert entry["video"] == "clip.mp4" and entry["fps"] == 60 and entry["scale"] == 2.0
+    assert (stream["codec_name"], stream["r_frame_rate"]) == ("h264", f"{rate}/1")
+    assert entry["video"] == "clip.mp4" and entry["fps"] == rate and entry["scale"] == 2.0
     assert entry["grid"] == "20x5" and entry["padding_px"] > 0 and len(entry["cell_px"]) == 2
     assert "webm" not in entry
 
 
 @needs_all
-def test_both_profile_derives_the_webm_and_gif_from_the_mp4(tmp_path):
+@pytest.mark.parametrize("rate", [30, 60])
+def test_both_profile_derives_the_webm_and_gif_from_the_mp4(tmp_path, project_fps, rate):
+    project_fps(rate)
     rec, _ = _short_rec()
     entry = render_recording(rec, tmp_path, "clip", "both")
     assert sorted(p.name for p in tmp_path.iterdir()) == ["clip.gif", "clip.mp4", "clip.png", "clip.webm"]
     mp4, webm = _probe(tmp_path / "clip.mp4", "stream=r_frame_rate,width"), _probe(
         tmp_path / "clip.webm", "stream=r_frame_rate,width")
-    assert (mp4["r_frame_rate"], webm["r_frame_rate"]) == ("60/1", "30/1")
+    assert (mp4["r_frame_rate"], webm["r_frame_rate"]) == (f"{rate}/1", "30/1")
     assert webm["width"] == mp4["width"] // 2
     assert (entry["file"], entry["webm"], entry["poster"], entry["video"]) == (
         "clip.gif", "clip.webm", "clip.png", "clip.mp4")

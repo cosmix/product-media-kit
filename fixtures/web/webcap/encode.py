@@ -54,9 +54,11 @@ def webm_command(dest: Path, fps: int) -> list[str]:
             "-vf", TO_BT709, *VP9, *BT709, "-r", str(fps), str(dest)]
 
 
-def derived_webm_command(src: Path, dest: Path) -> list[str]:
-    """The mp4 at DERIVED_FPS and half size (even sides) as a VP9 WebM."""
-    graph = f"fps={DERIVED_FPS},scale=trunc(iw/4)*2:trunc(ih/4)*2:flags=lanczos,{TO_BT709}"
+def derived_webm_command(src: Path, dest: Path, fps: int) -> list[str]:
+    """The mp4 (recorded at `fps`) at half size (even sides) as a VP9 WebM, resampled to
+    DERIVED_FPS when `fps` differs."""
+    resample = "" if fps == DERIVED_FPS else f"fps={DERIVED_FPS},"
+    graph = f"{resample}scale=trunc(iw/4)*2:trunc(ih/4)*2:flags=lanczos,{TO_BT709}"
     return ["ffmpeg", "-y", "-loglevel", "error", "-i", str(src), "-vf", graph, *VP9, *BT709,
             str(dest)]
 

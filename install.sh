@@ -4,13 +4,13 @@
 # project's Claude Code settings; then install the system packages with the project's
 # system-deps.sh. Needs bash and the standard tools it calls: cat, cp, dirname, find, grep, head,
 # mkdir, paste, sed, sort, tar, tr.
-#   ./install.sh <project-dir> [--force] [--no-system] [--setup]
+#   ./install.sh <project-dir> [--force] [--no-system] [--setup] [--fps N --piano vsco|salamander]
 set -euo pipefail
 KIT="$(cd "$(dirname "$0")" && pwd -P)"
 
 usage() {
   cat <<'EOF'
-Usage: ./install.sh <project-dir> [--force] [--no-system] [--setup]
+Usage: ./install.sh <project-dir> [--force] [--no-system] [--setup] [--fps N --piano vsco|salamander]
 
 Copies the kit into <project-dir> (created if missing). The project's slug comes from the folder
 name (lowercase, other characters become single hyphens; "project" when nothing is left); a note
@@ -33,18 +33,28 @@ captures/, outputs/ and downloaded sample libraries (music/samples/) are not cop
             when you have no administrator rights and give `./system-deps.sh --dry-run` output
             to an administrator
   --setup   run <project-dir>/setup.sh after copying (after system-deps.sh) and exit with its status
+  --fps N --piano vsco|salamander  save the video's frame rate (1-120) and piano library in
+            project.json with ./configure.sh (both together). Without them /mediatime asks.
 
 Without --force the install stops, writing nothing, if any file it would write already exists.
 EOF
 }
 
-TARGET="" FORCE=0 SETUP=0 SYSTEM=1
+TARGET="" FORCE=0 SETUP=0 SYSTEM=1 FPS="" PIANO=""
 while [ $# -gt 0 ]; do
   case "$1" in
     -h|--help) usage; exit 0 ;;
     --force) FORCE=1 ;;
     --setup) SETUP=1 ;;
     --no-system) SYSTEM=0 ;;
+    --fps)
+      [ $# -ge 2 ] && [[ "$2" =~ ^[0-9]+$ ]] && [ "$2" -ge 1 ] && [ "$2" -le 120 ] ||
+        { echo "--fps needs a whole number from 1 to 120" >&2; exit 2; }
+      FPS="$2"; shift ;;
+    --piano)
+      [ $# -ge 2 ] && { [ "$2" = vsco ] || [ "$2" = salamander ]; } ||
+        { echo "--piano needs vsco or salamander" >&2; exit 2; }
+      PIANO="$2"; shift ;;
     -*) echo "unknown option: $1 (try --help)" >&2; exit 2 ;;
     *) [ -z "$TARGET" ] || { echo "only one project folder allowed (try --help)" >&2; exit 2; }
        TARGET="$1" ;;
@@ -52,6 +62,9 @@ while [ $# -gt 0 ]; do
   shift
 done
 [ -n "$TARGET" ] || { usage >&2; exit 2; }
+if [ -n "$FPS$PIANO" ] && { [ -z "$FPS" ] || [ -z "$PIANO" ]; }; then
+  echo "--fps and --piano go together (try --help)" >&2; exit 2
+fi
 
 # abspath PATH: canonical absolute path of PATH, which need not exist yet (macOS has no `realpath -m`).
 # The deepest existing folder is resolved by the shell; the rest is normalised as text.
@@ -101,7 +114,8 @@ KIT_LIST="$(list_files "$KIT" ./install.sh ./claude-skills ./claude-settings.jso
 # project-owned records: copied only when absent, never overwritten, even with --force
 KEEP_LIST="./.gitignore
 ./music/CREDITS.md
-./broll/CREDITS.md"
+./broll/CREDITS.md
+./project.json"
 COPY_LIST="" KEPT=""
 while IFS= read -r f; do
   if grep -qxF -- "$f" <<<"$KEEP_LIST" && { [ -e "$DEST/${f#./}" ] || [ -L "$DEST/${f#./}" ]; }; then
@@ -164,6 +178,10 @@ if [ ! -e "$DEST/project.json" ]; then
   PROJECT_NOTE="written (slug $SLUG)"
 else
   PROJECT_NOTE="kept (already in the project)"
+fi
+if [ -n "$FPS" ]; then
+  "$DEST/configure.sh" --fps "$FPS" --piano "$PIANO" >/dev/null
+  PROJECT_NOTE="$PROJECT_NOTE; $FPS fps, piano $PIANO"
 fi
 # the project's Claude Code settings: written once, never overwritten, since the project may add its own
 SETTINGS="$DEST/.claude/settings.json"

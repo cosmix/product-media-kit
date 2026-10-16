@@ -41,7 +41,7 @@ records" before this guide.
 
 ## What the video is
 
-A video of about two to three minutes at 1920x1080 and 60 fps with:
+A video of about two to three minutes at 1920x1080 and the project's frame rate (default 30) with:
 
 - a narrator (Gemini TTS) reading a script the human and the lead agent write together;
 - an original score composed as Python code and rendered from free sample libraries;
@@ -62,8 +62,8 @@ choice not made is out of scope: no role, no brief, no questions about it.
 When the project also has a blog, the video takes the claims (`claims.md`), the fixture story
 (`scenarios.md`) and the captures from it, and gives back motion stills, logo renders and frames
 (`postkit add`). See `README.md` "Reuse between media". Run the captures with `--for both` when
-both media are chosen, so one capture serves both: the video needs the 60 fps `clip.mp4` that the
-`video` and `both` profiles write (`guides/capture.md` "Profiles").
+both media are chosen, so one capture serves both: the video needs the `clip.mp4` that the
+`video` and `both` profiles write at the project's frame rate (`guides/capture.md` "Profiles").
 
 ## The stack
 
@@ -71,7 +71,7 @@ both media are chosen, so one capture serves both: the video needs the 60 fps `c
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | Narration           | `gemini-3.8-flash-tts` through the `narration` Claude Code skill (`tts.py`)                                                                                   |
 | Ears for the agents | `tools/listen.py`: uploads audio or video to a Gemini model and asks questions about it                                                                       |
-| Music               | numpy/scipy sample playback, `pedalboard` for reverb and mastering, `pyloudnorm` for loudness; Salamander Grand Piano (CC BY 3.0) and VSCO-2 CE (CC0) samples |
+| Music               | numpy/scipy sample playback, `pedalboard` for reverb and mastering, `pyloudnorm` for loudness; VSCO-2 CE (CC0) samples, Salamander Grand Piano (CC BY 3.0) by opt-in |
 | Motion graphics     | skia-python (vector drawing, text, the logo), on the GPU through a moderngl OpenGL context (headless EGL on Linux, CGL on macOS)                              |
 | B-roll              | Gemini Omni (`gemini-omni-1.1-flash`) through `tools/genvideo.py`, prompts in `broll/gen/shots.json`                                                          |
 | Word timings        | `faster-whisper` on the narration                                                                                                                             |
@@ -136,8 +136,16 @@ a new section) goes to the tier that succeeded.
 
 ## The workflow
 
-Phase 0 is the `/mediatime` kickoff in `README.md` "Kickoff": the machine check, the interview,
-the Gemini key, the brand skill, `NOTES.md` and `rates.json`. It ends by sending the lead here.
+Phase 0 is the `/mediatime` kickoff in `README.md` "Kickoff": the machine check, the frame rate
+and piano saved in `project.json`, the interview, the Gemini key, the brand skill, `NOTES.md` and
+`rates.json`. It ends by sending the lead here.
+
+**The frame rate is the project's.** `project.json` `fps` (default 30, set with
+`./configure.sh --fps N --piano vsco|salamander`) is the rate of the video captures, motion
+graphics and the master. Leave `FPS` out of `edit/edl.py` and `--fps` off `motion/render.py` so
+both inherit it; set them only when the human asks for an override. Where another instruction
+names 60 fps, the saved rate wins. After a change of rate, rerender the captures, motion scenes
+and master made before it; after a change of piano, rerender the score.
 Learn the product from its own documentation first: read the repository's docs index and pull
 only the sections the video needs (the features it will mention). Accurate claims in the script
 depend on this, and so do the fixtures later. Put the claims in `claims.md` and verify each one.
@@ -274,7 +282,7 @@ informed; cancel it when the work settles.
   Intermediates stay put: `edit/out/mix.wav`, `edit/build/frames/`, `motion/out/`, `music/out/`.
 - **Target format**: see [Encoding](#encoding).
 - **Intermediates**: H.264 `-crf 10 -preset slow -pix_fmt yuv420p`, or ProRes 4444
-  (`yuva444p10le`) when alpha is needed; constant 60 fps. Video captures are scale 2 (3840x2160
+  (`yuva444p10le`) when alpha is needed; constant frame rate, the project's. Video captures are scale 2 (3840x2160
   for a 1920x1080 viewport) so pushes stay sharp; motion graphics at 1920x1080, rendered
   supersampled.
 - **Manifests**: every workstream writes a `manifest.json` next to its outputs: file, size, fps,
@@ -326,7 +334,7 @@ A capture manifest entry the edit syncs to (the clip of scenario `settings`):
   "width": 3840,
   "height": 2160,
   "scale": 2.0,
-  "fps": 60,
+  "fps": 30,
   "duration": 18.85,
   "marks": [
     { "t": 1.817, "event": "dialog opens", "key": true },
@@ -559,6 +567,14 @@ music bed, and the credits list no samples ([The mix](#the-mix)). A score of syn
 instruments only (`pluck`, `sub`, the synthesized percussion) needs no sample libraries
 (`./setup.sh --no-samples`); a sampled instrument without them stops the render with a message
 naming the missing folder.
+
+**Piano choice.** `piano` plays VSCO's Upright Nr1 (CC0) by default. It plays the Salamander
+grand piano (CC BY 3.0) only when `project.json` `piano` is `salamander`, which the human chooses
+explicitly, knowing the credit it requires on screen and in the video description; never select or
+download Salamander otherwise. `setup.sh` fetches Salamander only under that setting. The render
+records the libraries the score used in `music/manifest.json` `sample_libraries`, and the credits
+name Salamander only when that render used it. A change of piano takes a new render of the score;
+it does not change audio rendered before it.
 
 **Score as code.** The composer writes the score as Python data (motifs, harmony, parts, an
 arrangement per section) and renders it with a small sampler: nearest sample per note and
@@ -922,8 +938,9 @@ uv run render.py --share                   # the share copy of the latest final 
 word), which camera move, which transition. The project writes it; `editkit/project.py` loads it
 for `render.py`, `mix.py` and `credits.py`. It defines `END` (the last frame, in seconds) and
 `build() -> Timeline`, and optionally `BROLL_CLIPS` (b-roll names the cut uses, for the credits),
-`BUSY` (scene keys where the mix ducks the melody further) and `FPS` (the master's frame rate,
-default 60; `--preview` renders at most 30). A skeleton:
+`BUSY` (scene keys where the mix ducks the melody further) and `FPS` (an override of the master's
+frame rate, which is otherwise `project.json` `fps`, default 30; `--preview` renders at most 30).
+A skeleton:
 
 ```python
 from editkit import cards
@@ -1068,7 +1085,8 @@ Credits are data, so the on-screen card and the video description
 
 - `music/CREDITS.md` records each sample library: source, files, licence, what it is used for.
   `credit_data.music_samples()` credits only the libraries whose licence requires attribution
-  (CC0 ones are left out), and none without a soundtrack.
+  (CC0 ones are left out), Salamander only when `music/manifest.json` `sample_libraries` lists
+  it, and none without a soundtrack.
 - `broll/CREDITS.md` gets a `## <clip name>` section with `- Title:`, `- Channel:`, `- URL:`,
   `- Licence:` and `- Range used:` lines for every CC BY clip. `credit_data.broll()` credits only
   clips with a section, so generated clips (no section) get no row, and a video without b-roll
@@ -1149,7 +1167,7 @@ Also check:
 
 ## Encoding
 
-**Target format**: 1920x1080 at 60 fps (another rate: set `FPS` in `edl.py`), H.264 High (yuv420p,
+**Target format**: 1920x1080 at the project's frame rate (`project.json` `fps`, default 30), H.264 High (yuv420p,
 BT.709, tv range), AAC 48 kHz stereo, -14 LUFS integrated with true peak at most -1 dBTP,
 faststart. Frame 0 is a designed image; the video ends on a fade to pure black (Y=16).
 
@@ -1178,7 +1196,7 @@ ffmpeg -v error -y -f rawvideo -pix_fmt rgb24 -s 1920x1080 -r 60 -i - \
 
 For social media and messaging, `uv run render.py --share` (from `edit/`) transcodes the latest
 final master to `outputs/final-<slug>-vN-share.mp4`; `--revision vN` picks another. It keeps
-1920x1080, drops the frame rate from 60 to 30 fps (a master at 30 fps or less keeps its rate),
+1920x1080, drops a higher frame rate to 30 fps (a master at 30 fps or less keeps its rate),
 and uses H.264 High Profile, Level 4.1, 8-bit 4:2:0 video at `-crf 21` with AAC-LC stereo audio at
 160 kb/s in an MP4 container, which Apple devices play. `-crf 21` sets visual quality rather than
 a fixed bitrate; `+faststart` moves the MP4 index to the front so web playback starts promptly.

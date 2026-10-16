@@ -3,10 +3,15 @@ shutter-sampled motion blur, bloom and grain.
 """
 
 import math
+import sys
 from dataclasses import dataclass, field
+from pathlib import Path
 
 import moderngl
 import numpy as np
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))  # the project root, for tools/
+from tools.project_settings import read as project_settings
 
 from . import art, design
 from .assets import resolve
@@ -22,10 +27,15 @@ def _lin(rgb):
     return tuple(((c / 255 + 0.055) / 1.055) ** 2.4 if c / 255 > 0.04045 else c / 255 / 12.92 for c in rgb)
 
 
+def project_fps() -> int:
+    """The master's default frame rate: project.json's fps (30 when absent)."""
+    return project_settings()["fps"]
+
+
 @dataclass
 class Quality:
     res: tuple = (1920, 1080)
-    fps: int = 60
+    fps: int = field(default_factory=project_fps)
     grain: float = field(default_factory=design.grain)
     dof: bool = True
     motion_blur: bool = True

@@ -412,7 +412,7 @@ captures/<source>/
     "width": 3840, "height": 2160, "scale": 2.0, "boxes": {"save": [3112, 1904, 220, 88]}},
    {"id": "overview/clip", "kind": "clip", "origin": "clip", "file": "overview/clip.gif",
     "webm": "overview/clip.webm", "poster": "overview/clip.png", "video": "overview/clip.mp4",
-    "width": 3840, "height": 2160, "scale": 2.0, "fps": 60, "duration": 4.5, "boxes": {},
+    "width": 3840, "height": 2160, "scale": 2.0, "fps": 30, "duration": 4.5, "boxes": {},
     "marks": [{"t": 1.2, "event": "dialog opens", "key": true}],
     "cursor": [{"t": 0.0, "x": 100, "y": 200, "down": false}], "cursor_space": "css-1920x1080"}]}
 ```
@@ -461,11 +461,14 @@ scenario changes nothing else.
 A profile decides how a clip is recorded and which files it gets. Stills from `SHOTS` are the same
 in every profile (web scale 2, TUI 2x density).
 
-| Profile | Scale | FPS | Files                                                                                                     |
-| ------- | ----- | --- | --------------------------------------------------------------------------------------------------------- |
-| `blog`  | 1     | 30  | `clip.webm` (VP9), `clip.gif` (15 fps, at most 960 px wide), `clip.png` poster                            |
-| `video` | 2     | 60  | `clip.mp4` (H.264 crf 10, yuv420p, bt709), `clip.png` poster, the cursor track (web) or grid (TUI)        |
-| `both`  | 2     | 60  | records once as `video`, then derives the WebM (30 fps, half size) and the GIF from the mp4; full-size poster |
+| Profile | Scale | FPS     | Files                                                                                                         |
+| ------- | ----- | ------- | ------------------------------------------------------------------------------------------------------------- |
+| `blog`  | 1     | 30      | `clip.webm` (VP9), `clip.gif` (15 fps, at most 960 px wide), `clip.png` poster                                |
+| `video` | 2     | project | `clip.mp4` (H.264 crf 10, yuv420p, bt709), `clip.png` poster, the cursor track (web) or grid (TUI)            |
+| `both`  | 2     | project | records once as `video`, then derives the WebM (30 fps, half size) and the GIF from the mp4; full-size poster |
+
+"project" is `project.json` `fps`, the video's frame rate (default 30, set with `./configure.sh`).
+The `both` profile's WebM is resampled to 30 fps only when that rate differs.
 
 - **Default**: `--for` from `project.json` `media`: video and blog give `both`, video alone
   `video`, anything else `blog`.

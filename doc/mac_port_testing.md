@@ -61,7 +61,7 @@ took. Do not fix failures before writing them down.
 cd ~/x-media                         # (open a new terminal first if Homebrew or uv was just installed)
 /bin/bash --version | head -n 1      # expect 3.2.x: the scripts must work with it
 ./setup.sh --check                   # reports only; changes nothing; media empty, so everything
-./setup.sh                           # downloads about 3.4 GB of samples, Chromium, the Whisper model
+./setup.sh                           # downloads VSCO (about 2.2 GB), Chromium, the Whisper model
 ./setup.sh --check
 ./setup.sh --check --for blog        # the blog's scope: no GPU section, ffmpeg a WARN at most
 ```
@@ -100,7 +100,7 @@ The self-test draws a text card, a circle, a rounded square and a hairline on th
 (and the logo, if `design.json` names one), then writes `out/selftest_01.50.png`,
 `out/selftest_contact.png` and a 2 s clip `out/selftest.mp4`. It prints `GL_RENDERER` first. Pass
 when the still looks right (text in Helvetica, white on black without a `design.json`; no blank
-frame) and the clip is 1920x1080 H.264 with 120 frames:
+frame) and the clip is 1920x1080 H.264 with 60 frames (2 s at the default 30 fps; 120 with `project.json` `fps` 60):
 
 ```bash
 ffprobe -v error -select_streams v:0 -show_entries stream=codec_name,width,height,pix_fmt,nb_frames -of compact out/selftest.mp4

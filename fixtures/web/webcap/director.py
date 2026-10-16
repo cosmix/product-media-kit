@@ -5,7 +5,7 @@ every frame the server sent, advance the page's faked clock (timers, rAF,
 Date, performance.now), dispatch this frame's input, seek every CSS
 animation and transition to the same virtual time, then screenshot. Nothing
 depends on how long a screenshot takes, so motion is exactly the profile's
-frame rate (30 fps blog, 60 fps video and both). In live mode (no World) the
+frame rate (30 fps blog; the project's fps, default 30, for video and both). In live mode (no World) the
 first two steps are skipped: the page's own clock is still stepped, the live
 server's data arrives in real time.
 
@@ -142,7 +142,7 @@ class Director:
         if self.profile.blog:
             if self.profile.video:
                 webm = clip.file("webm")
-                await encode.derive(webm, encode.derived_webm_command(first, temp_path(webm)))
+                await encode.derive(webm, encode.derived_webm_command(first, temp_path(webm), self.fps))
             gif = clip.file("gif")
             await encode.derive(gif, encode.gif_command(first, temp_path(gif), size[0]))
         write_atomic(clip.file("png"), self._last_png)

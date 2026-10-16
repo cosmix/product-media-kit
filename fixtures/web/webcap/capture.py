@@ -2,7 +2,7 @@
 
     uv run python -m webcap.capture                        # every SHOTS scenario, into captures/web/
     uv run python -m webcap.capture settings --clips       # one scenario, its clip too
-    uv run python -m webcap.capture --clips --for video    # clips as 60 fps mp4 at scale 2
+    uv run python -m webcap.capture --clips --for video    # clips as mp4 at scale 2, project.json fps
     uv run python -m webcap.capture tour --clips --draft   # a quick scale-1 check of the choreography
     uv run python -m webcap.capture --selftest             # built-in page, into captures/web-selftest/
 

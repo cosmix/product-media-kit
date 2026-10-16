@@ -4,7 +4,7 @@
 
 ## Renderer and scenes (motion/)
 
-One uv project (Python >= 3.12; skia-python, moderngl, numpy, Pillow). `uv run render.py <scene> [--duration s] [--alpha] [--variants] [--contact] [--fps n] [--still t]` renders the project's `motion/scenes/<scene>.py`, a module defining `SCENE`, a `lib.scene.Scene` subclass authored in nominal seconds and retimed uniformly by `--duration`. Output: `motion/out/<scene>.mp4` (H.264) or a transparent `motion/out/<scene>_alpha.mov` (ProRes 4444), and `motion/out/manifest.json` with the retimed marks the edit reads. `uv run render.py --selftest` renders the kit's own scene (a still, a contact sheet, a 2 s clip) to check the GPU and encoder; `render_all.sh` renders every scene.
+One uv project (Python >= 3.12; skia-python, moderngl, numpy, Pillow). `uv run render.py <scene> [--duration s] [--alpha] [--variants] [--contact] [--fps n] [--still t]` (`--fps` defaults to `project.json` `fps`, 30 when absent) renders the project's `motion/scenes/<scene>.py`, a module defining `SCENE`, a `lib.scene.Scene` subclass authored in nominal seconds and retimed uniformly by `--duration`. Output: `motion/out/<scene>.mp4` (H.264) or a transparent `motion/out/<scene>_alpha.mov` (ProRes 4444), and `motion/out/manifest.json` with the retimed marks the edit reads. `uv run render.py --selftest` renders the kit's own scene (a still, a contact sheet, a 2 s clip) to check the GPU and encoder; `render_all.sh` renders every scene.
 
 ## lib
 

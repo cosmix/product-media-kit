@@ -20,7 +20,8 @@ REQUIRED = (
 )
 MODULE_ROOTS = tuple(KIT / p for p in ("fixtures/web", "fixtures/tui/src", "post/src", "edit", "motion", "music"))
 SCRIPT_DIRS = tuple(KIT / p for p in ("", "edit", "motion", "music", "narration", "post", "fixtures/web", "fixtures/tui"))
-SHELL_SCRIPTS = ("setup.sh", "install.sh", "system-deps.sh")
+SHELL_SCRIPTS = ("setup.sh", "install.sh", "system-deps.sh", "inflate.sh")
+WRAPPERS = {"configure.sh": "tools/project_settings.py", "export.sh": "tools/export_project.py"}  # exec argparse
 PACKAGES = ("webcap", "tuicap", "postkit", "editkit")
 STALE = re.compile(
     r"product-video-kit|product-blog-kit|Product (Video|Blog) Kit|edit/out/intro|post\.json|open_scene"
@@ -30,7 +31,7 @@ README_MAP = {
     "What you make": ["The stack"],
     "How the kit is used": [],
     "Requirements": [],
-    "Setup": ["Install into a project", "System packages", "Self-tests", "Running on macOS"],
+    "Setup": ["Install into a project", "System packages", "Self-tests", "Running on macOS", "Sharing a project"],
     "The team": ["Rules that make the team work", "Good briefs"],
     "Kickoff": [],
     "Reuse between media": [],
@@ -153,6 +154,8 @@ def uv_problems(command: str, rest: str) -> list[str]:
 def shell_problems(command: str) -> list[str]:
     script, _, args = command.partition(" ")
     name = script.removeprefix("./")
+    if name in WRAPPERS:
+        return flag_problems(command, args, [KIT / WRAPPERS[name]])
     if name not in SHELL_SCRIPTS:
         return []
     text = (KIT / name).read_text()

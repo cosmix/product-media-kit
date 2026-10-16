@@ -18,8 +18,8 @@ Two ways to run the product:
 
 Scenario names (the keys of SHOTS and CLIPS) match webcap.names.NAME_RE.
 
-<project>/project.json ({"slug": ..., "media": ["video", "blog"]}) sets the default capture
-profile (webcap.profiles) and viewport.
+<project>/project.json ({"slug": ..., "media": ["video", "blog"], "fps": 30, "piano": "vsco"})
+sets the default capture profile (webcap.profiles), the viewport and the video frame rate.
 """
 
 from __future__ import annotations
@@ -30,6 +30,9 @@ import os
 import sys
 from functools import lru_cache
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))  # the project root, for tools/
+from tools.project_settings import read as project_settings
 
 from webcap.names import check_name
 
@@ -96,6 +99,19 @@ def default_profile(path: Path | None = None) -> str:
     if chosen == set(MEDIA):
         return "both"
     return "video" if "video" in chosen else "blog"
+
+
+def fps(path: Path | None = None) -> int:
+    """project.json's `fps` (default <ROOT>/project.json), the video and both profiles' frame
+    rate; 30 when the file or key is absent (tools/project_settings.py).
+
+    Raises ProjectError for a value outside 1-120.
+    """
+    path = path or ROOT / "project.json"
+    try:
+        return project_settings(path.parent)["fps"]
+    except ValueError as err:
+        raise ProjectError(str(err)) from None
 
 
 def viewport(module, path: Path | None = None) -> tuple[int, int]:

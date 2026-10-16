@@ -4,11 +4,15 @@ or VP9 WebM out, then the WebM and GIF derived for the blog."""
 from __future__ import annotations
 
 import subprocess
+import sys
 from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[4]  # the project: fixtures/tui/src/tuicap/../../../..
+sys.path.insert(0, str(ROOT))  # for tools/
+from tools.project_settings import read as project_settings
 
 PROFILES = ("blog", "video", "both")
 BLOG_FPS = 30  # the blog profile's frame rate and the derived WebM's
-VIDEO_FPS = 60
 GIF_FPS = 15
 GIF_MAX_WIDTH = 960
 DRAFT_CRF = "23"
@@ -24,14 +28,17 @@ def uses_mp4(profile: str) -> bool:
     return profile != "blog"
 
 
-def fps_for(profile: str) -> int:
-    return VIDEO_FPS if uses_mp4(profile) else BLOG_FPS
+def fps_for(profile: str, root: Path | None = None) -> int:
+    """BLOG_FPS for blog; for video and both, project.json's fps under `root` (default ROOT; 30
+    when absent, tools/project_settings.py)."""
+    return project_settings(root or ROOT)["fps"] if uses_mp4(profile) else BLOG_FPS
 
 
-def encoder(path: Path, width: int, height: int, profile: str, draft: bool = False) -> subprocess.Popen:
-    """ffmpeg reading raw RGBA frames on stdin: a bt709 H.264 MP4 for video and both
+def encoder(path: Path, width: int, height: int, profile: str, fps: int,
+            draft: bool = False) -> subprocess.Popen:
+    """ffmpeg reading raw RGBA frames at `fps` on stdin: a bt709 H.264 MP4 for video and both
     (slow crf 10, or ultrafast crf 23 as a draft), a VP9 WebM for blog."""
-    fps = str(fps_for(profile))
+    fps = str(fps)
     cmd = [
         "ffmpeg", "-y", "-loglevel", "error",
         "-f", "rawvideo", "-pix_fmt", "rgba", "-s", f"{width}x{height}", "-r", fps,
@@ -55,9 +62,11 @@ def _ffmpeg(*args: str) -> None:
         raise RuntimeError(f"ffmpeg failed: {result.stderr.strip()}")
 
 
-def webm_from_mp4(mp4: Path, webm: Path) -> None:
-    """The blog WebM from the video MP4: 30 fps at half the pixel size."""
-    _ffmpeg("-i", str(mp4), "-vf", f"fps={BLOG_FPS},scale=trunc(iw/4)*2:trunc(ih/4)*2:flags=lanczos",
+def webm_from_mp4(mp4: Path, webm: Path, fps: int) -> None:
+    """The blog WebM from the video MP4 (recorded at `fps`): BLOG_FPS, resampled only when `fps`
+    differs, at half the pixel size."""
+    resample = "" if fps == BLOG_FPS else f"fps={BLOG_FPS},"
+    _ffmpeg("-i", str(mp4), "-vf", f"{resample}scale=trunc(iw/4)*2:trunc(ih/4)*2:flags=lanczos",
             "-c:v", "libvpx-vp9", "-b:v", "0", "-crf", "32", "-pix_fmt", "yuv420p", str(webm))
 
 

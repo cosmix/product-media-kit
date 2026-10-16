@@ -6,9 +6,9 @@
 
 Package `fixtures/web/webcap/` (run from `fixtures/web` with `uv run python -m <module>`; no console script):
 - `names.py`: `NAME_RE` (`^[a-z0-9]+(-[a-z0-9]+)*$`) and `check_name(kind, value)` for scenarios, labels and box names.
-- `profiles.py`: `NAMES = ("video", "blog", "both")`, `STILL_SCALE = 2.0`, frozen `Profile(name, scale, fps, draft)` with `.video`, `.blog`, `.encoders`; `profile(name, draft)`.
+- `profiles.py`: `NAMES = ("video", "blog", "both")`, `STILL_SCALE = 2.0`, frozen `Profile(name, scale, fps, draft)` with `.video`, `.blog`, `.encoders`; `profile(name, draft=False, fps=None)`: blog is always 30 fps, video and both record at `fps`, else `project.fps()`.
 - `encode.py`: the ffmpeg commands (`mp4_command`, `webm_command`, `derived_webm_command`, `gif_command`), `check_frame_size`, `ffmpeg_problem(profile)`; `setparams` bt709 filter (see [mistakes/media-kit-merge](../mistakes/media-kit-merge.md)).
-- `project.py`: `product()` imports `<project>/fixtures/web/product.py`, runs `mode()` and `check_names()`; `media()`, `default_profile()`, `viewport(module)` read `<project>/project.json`; a `ProjectError` becomes a one-line `SystemExit`. `base_url(module)` is env `PRODUCT_URL` (wins), else `BASE_URL`.
+- `project.py`: `product()` imports `<project>/fixtures/web/product.py`, runs `mode()` and `check_names()`; `media()`, `default_profile()`, `viewport(module)` and `fps()` (through `tools/project_settings.read`, default 30) read `<project>/project.json`; a `ProjectError` becomes a one-line `SystemExit`. `base_url(module)` is env `PRODUCT_URL` (wins), else `BASE_URL`.
 - `world.py`: `EPOCH`, frozen `Clock`, `World(scenes)` with `set_scene`, `async tick(t)`, `async send(ws, data)`.
 - `server.py`: `PORT = 7373`, `require_env(name, what)`, `serve_dist(app, dist)`, a preview `main` (`--scene`, `--port`).
 - `browser.py`: `context_options` (VIEWPORT, THEME, reduced motion), `session(module)`, `open_page(...)`; `page_script.py` holds `INIT_SCRIPT`.
@@ -22,8 +22,8 @@ Package `fixtures/web/webcap/` (run from `fixtures/web` with `uv run python -m <
 | Profile | Scale | FPS | Clip files |
 | --- | --- | --- | --- |
 | `blog` | 1 | 30 | `clip.webm` (VP9), `clip.gif` (15 fps, max 960 px), `clip.png` poster |
-| `video` | 2 | 60 | `clip.mp4` (H.264 crf 10, yuv420p, bt709), poster, cursor track |
-| `both` | 2 | 60 | recorded once as video; WebM (30 fps, half size) and GIF derived from the mp4 |
+| `video` | 2 | project `fps` (default 30) | `clip.mp4` (H.264 crf 10, yuv420p, bt709), poster, cursor track |
+| `both` | 2 | project `fps` (default 30) | recorded once as video; WebM (30 fps, half size; `derived_webm_command` resamples only when the mp4's rate differs) and GIF derived from the mp4 |
 
 SHOTS stills are scale 2.0 in every profile.
 

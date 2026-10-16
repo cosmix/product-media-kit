@@ -85,10 +85,27 @@ Work only in the project folder from now on.
 **Which media.** Claude first asks what to make: a video, a blog post, or both, and for both which
 comes first.
 
+**Video choices.** For a video Claude asks the frame rate (30 fps unless you want another) and,
+if the video has music, the piano: VSCO (needs no credit) or the Salamander grand piano, which
+must be credited on screen and in the video description. Claude uses Salamander only when you
+pick it. If you tell Claude to decide, it saves 30 fps and VSCO. The answers are saved in
+`project.json` and reused when you come back. To change them later, tell Claude, or run this in
+the project folder:
+
+```bash
+./configure.sh --fps 24 --piano vsco
+```
+
+After `--piano salamander`, run `./setup.sh` to download it. The frame rate applies to captures,
+motion graphics and the finished video; media rendered earlier keeps its old rate until it is
+rendered again. You can also give both answers to the install: `./install.sh ~/<product>-launch
+--fps 30 --piano vsco`.
+
 **Setup.** Claude checks the machine for what the chosen media need and downloads what is missing,
-without administrator rights. For a video it asks whether there will be music before downloading
-the music samples (about 3.4 GB). If a system package is still missing, Claude stops and asks you
-to run `./system-deps.sh` in a separate terminal, outside Claude Code, then continues.
+without administrator rights. For a video with music it downloads the music samples: VSCO, about
+2.2 GB, and Salamander, about 1.2 GB more, only when you chose it. If a system package is still
+missing, Claude stops and asks you to run `./system-deps.sh` in a separate terminal, outside
+Claude Code, then continues.
 
 **Questions.** Claude asks about your product and where its code and docs are, who the video or
 post is for and what they should do afterwards, the screenshots (web, terminal, light or dark),
@@ -164,7 +181,8 @@ for review, `final` for delivery), the project and a revision number, so every v
 reviewed stays:
 
 - `outputs/draft-<project>-v2.mp4`: a video preview;
-- `outputs/final-<project>-v3.mp4`: the finished video, 1920x1080 at 60 fps;
+- `outputs/final-<project>-v3.mp4`: the finished video, 1920x1080 at the frame rate you chose
+  (30 fps by default);
 - `outputs/final-<project>-v3-share.mp4`: a smaller 30 fps copy for social media and messaging,
   when you ask for it;
 - `outputs/final-<project>-v3.srt`: subtitles, when the video has narration;
@@ -208,6 +226,36 @@ because the kit has no files of those names. If Claude patched a kit file during
 interrupted, run the same command again.
 
 Without `--force`, the install stops and writes nothing when any file already exists.
+
+## Sharing a project
+
+To hand the whole project to someone else, run this in the project folder, naming an archive
+outside the folder that does not exist yet:
+
+```bash
+./export.sh --output ../<product>-launch.tar.gz
+```
+
+The archive keeps everything you made and paid for: the script or post, narration, captures,
+b-roll, renders, `outputs/`, the brand files, the records and the saved choices. It leaves out what
+can be downloaded or rebuilt (music samples, Python environments, caches, build folders), Git
+history and local credential files such as `.env`. A link to a file outside the project stops the
+export: copy that file into the project and export again. A project made with an older kit needs
+the update above first.
+
+The recipient extracts it and opens a terminal in the project folder:
+
+```bash
+tar -xzf <product>-launch.tar.gz
+cd <product>-launch
+./inflate.sh
+```
+
+`./inflate.sh` installs the system packages (it may ask for the password), then the Python
+environments, the selected music samples, the browser and the speech model. It needs internet
+access. With the system packages already installed, use `./inflate.sh --no-system`;
+`./inflate.sh --check` only reports what is missing. API keys do not travel in the archive: the
+recipient sets their own `GEMINI_API_KEY`.
 
 ## If something goes wrong
 

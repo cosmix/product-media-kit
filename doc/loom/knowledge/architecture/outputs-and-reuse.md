@@ -4,7 +4,7 @@
 
 ## Output names and revisions
 
-`<project>/project.json` is `{"slug": "<slug>", "media": [...]}`; `media` is an ordered subset of `["video", "blog"]`. Deliverables go to `outputs/` (video, flat) and `outputs/blog/` (the post, with `outputs/blog/images/`), named `<stage>-<slug>-v<N>[-<suffix>].<ext>` with stage `draft` or `final`:
+`<project>/project.json` is `{"slug": "<slug>", "media": [...], "fps": 30, "piano": "vsco"}`; `media` is an ordered subset of `["video", "blog"]`; `fps` (1-120) and `piano` (`vsco` or `salamander`) are the video's choices, absent until `./configure.sh` saves them (readers default to 30 and vsco). Deliverables go to `outputs/` (video, flat) and `outputs/blog/` (the post, with `outputs/blog/images/`), named `<stage>-<slug>-v<N>[-<suffix>].<ext>` with stage `draft` or `final`:
 
 ```text
 outputs/draft-<slug>-v<N>.mp4                    render.py --preview
@@ -33,7 +33,7 @@ Merge rule: `update` replaces the scenario's entries of the origin a run capture
 ## Reuse between media
 
 - Shared records: `project.json`, `<project>/BRAND.md`, `brand/`, `design.json`, `<project>/claims.md` (every claim verified once against the code) and `<project>/scenarios.md` (one fixture story, one table with a Media column); the video script and the blog outline both take from them. Scenario, label and box names share one regex (`^[a-z0-9]+(-[a-z0-9]+)*$`) in both media.
-- Capture once for both: with both media, `--for both` records one clip at scale 2 and 60 fps (`clip.mp4` for the edit) and derives the WebM and GIF for the post; one viewport serves both (1920x1080 when `media` includes video, else 1440x900; `VIEWPORT` in product.py wins).
+- Capture once for both: with both media, `--for both` records one clip at scale 2 and the project's `fps` (`clip.mp4` for the edit) and derives the WebM and GIF for the post; one viewport serves both (1920x1080 when `media` includes video, else 1440x900; `VIEWPORT` in product.py wins).
 - Video to blog: the draft links stills as `shot:web/<scenario>/<label>` (including `still()` frames a director took); motion renders, logo stills, b-roll and frames of a finished video enter through `postkit add motion|broll|video/<scenario>/<label> <file> [--at T | --from T --to T]`.
 - Blog to video: the edit references `web:<scenario>` (clip) or `still:web/<scenario>/<label>`; a blog-only clip is a 30 fps WebM at scale 1, so recapture with `--for both` for the cut. `/mediatime` writes a reuse inventory into `<project>/NOTES.md` when a medium is added.
 - Gap: a clip captured with `--for video` shows as a still in a post until recaptured with `--for both` ([concerns](../concerns.md)).
