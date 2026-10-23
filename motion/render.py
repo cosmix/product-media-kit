@@ -17,6 +17,7 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(HERE))  # the project root, for tools/
 sys.path.insert(0, HERE)
 
+from tools.metrics import timed
 from tools.project_settings import read as project_settings
 
 from lib import gfx
@@ -137,20 +138,26 @@ def main():
     args = parse()
     os.makedirs(OUT, exist_ok=True)
     if args.selftest:
-        selftest(gfx.Gpu(), args)
+        with timed("motion", "selftest"):
+            selftest(gfx.Gpu(), args)
         return
     scene = load(args.scene, args.duration)
     gpu = gfx.Gpu()
     transparent = (scene.alpha or args.alpha) and not args.opaque
     render = frame_fn(scene, gpu, transparent, args.handle)
+    name = args.scene
     if args.still is not None:
-        still(scene, render, args.still, args.suffix, args.over)
+        with timed("motion", f"{name} still"):
+            still(scene, render, args.still, args.suffix, args.over)
     elif args.contact:
-        contact(scene, render, scene.duration + 2 * args.handle, args.suffix)
+        with timed("motion", f"{name} contact"):
+            contact(scene, render, scene.duration + 2 * args.handle, args.suffix)
     else:
-        movie(scene, render, transparent, args)
+        with timed("motion", f"{name} {'alpha' if transparent else 'video'}", fps=args.fps):
+            movie(scene, render, transparent, args)
         if args.variants and not transparent:
-            movie(scene, frame_fn(scene, gpu, True, args.handle), True, args)
+            with timed("motion", f"{name} alpha", fps=args.fps):
+                movie(scene, frame_fn(scene, gpu, True, args.handle), True, args)
 
 
 if __name__ == "__main__":

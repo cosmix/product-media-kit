@@ -15,6 +15,7 @@ Logs every attempt's token counts and clip length to usage.jsonl (tools/usage_lo
 """
 import argparse
 import base64
+import contextlib
 import graphlib
 import hashlib
 import json
@@ -28,6 +29,13 @@ from pathlib import Path
 import broll_frames
 import usage_log
 from google import genai
+
+try:
+    from metrics import timed
+except ImportError:  # loaded without tools/ on sys.path (the tests do): timing is a no-op
+
+    def timed(*_args, **_kwargs):
+        return contextlib.nullcontext()
 
 PROJECT = Path(__file__).resolve().parent.parent
 ROOT = PROJECT / "broll" / "gen"
@@ -230,7 +238,8 @@ def run(client, shot, images):
     tmp, t0 = d / f".{sid}.tmp.mp4", time.time()
     for attempt in (1, 2):
         try:
-            r = generate(client, shot, images, tmp)
+            with timed("broll", f"shot {sid}", attempt=attempt, mode=shot.get("mode") or "text"):
+                r = generate(client, shot, images, tmp)
             break
         except Exception as e:  # noqa: BLE001 - any API or decoding failure is retried once, then reported
             tmp.unlink(missing_ok=True)
@@ -359,7 +368,7 @@ def main():
     if not jobs:
         return
     client = genai.Client()  # reads GEMINI_API_KEY from the environment
-    with ThreadPoolExecutor(max_workers=3) as ex:
+    with ThreadPoolExecutor(max_workers=3) as ex, timed("broll", "run", shots=len(jobs)):
         try:
             schedule(ex, client, jobs, ids)
         except KeyboardInterrupt:  # queued paid calls never start; the running ones end and keep their clips

@@ -21,7 +21,7 @@ from webcap.browser import launch, open_page, serving, session
 from webcap.director import Director
 from webcap.encode import ffmpeg_problem
 from webcap.profiles import NAMES, STILL_SCALE, Profile, profile
-from webcap.project import ROOT, default_profile, product
+from webcap.project import ROOT, default_profile, product, timed
 from webcap.shots import Shooter
 
 SOURCE = "web"
@@ -168,13 +168,16 @@ def main(argv: list[str] | None = None) -> None:
         if args.selftest:
             if args.scenarios or args.clips:
                 parser.error("--selftest takes only --out, --for and --draft")
-            sys.exit(asyncio.run(run_selftest(args.out or SELFTEST_OUT, prof)))
+            with timed("capture-web", "selftest", profile=prof.name):
+                code = asyncio.run(run_selftest(args.out or SELFTEST_OUT, prof))
+            sys.exit(code)
         module = product()
         shots, clips = choose(parser, args, module)
         problem = ffmpeg_problem(prof) if clips else None
         if problem:
             sys.exit(f"--clips needs ffmpeg with {', '.join(prof.encoders)}: {problem}")
-        asyncio.run(run(module, shots, clips, args.out or OUT, prof))
+        with timed("capture-web", "clips" if clips else "stills", profile=prof.name, scenarios=[*shots, *clips]):
+            asyncio.run(run(module, shots, clips, args.out or OUT, prof))
     except ValueError as err:  # a bad product.py or project.json (ProjectError), a rejected shot or clip
         sys.exit(f"webcap: {err}")
 

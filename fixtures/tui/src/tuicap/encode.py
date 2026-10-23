@@ -9,6 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[4]  # the project: fixtures/tui/src/tuicap/../../../..
 sys.path.insert(0, str(ROOT))  # for tools/
+from tools.metrics import timed  # noqa: F401 - clips.py times the capture with it
 from tools.project_settings import read as project_settings
 
 PROFILES = ("blog", "video", "both")

@@ -36,7 +36,7 @@ from typing import NamedTuple
 
 from . import design, manifest, palette
 from .capture import prompt, synth_cli
-from .encode import PROFILES
+from .encode import PROFILES, timed
 from .render import Geometry, Recording, cell_box, render_recording, render_still
 from .shots import Still
 
@@ -251,10 +251,12 @@ def main() -> None:
     check_design()
     profile = args.profile or default_profile()
     try:
-        if args.selftest:
-            selftest(args.out or OUT.parent / "tui-selftest", profile, args.draft)
-        else:
-            capture(args.scenarios, args.clips, args.out or OUT, profile, args.draft)
+        with timed("capture-tui", "selftest" if args.selftest else "clips" if args.clips else "stills",
+                   profile=profile, scenarios=args.scenarios):
+            if args.selftest:
+                selftest(args.out or OUT.parent / "tui-selftest", profile, args.draft)
+            else:
+                capture(args.scenarios, args.clips, args.out or OUT, profile, args.draft)
     except ValueError as e:
         sys.exit(f"tuicap: {e}")
 

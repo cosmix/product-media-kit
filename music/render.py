@@ -23,6 +23,9 @@ from pathlib import Path
 import numpy as np
 import soundfile as sf
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))  # the project root, for tools/
+from tools.metrics import timed
+
 from scorekit import synth
 from scorekit.instruments import STEMS, piano_library, registry
 from scorekit.library import SR
@@ -146,6 +149,11 @@ def main() -> None:
                     help="also write out/excerpt.wav for the given seconds")
     ap.add_argument("--selftest", action="store_true", help="render a short synth-only test to out/selftest/")
     a = ap.parse_args()
+    with timed("music", "selftest" if a.selftest else "qc" if a.qc_only else "render", seed=a.seed):
+        run(a)
+
+
+def run(a: argparse.Namespace) -> None:
     if a.qc_only:
         from scorekit.qc import run_qc
         print(json.dumps(run_qc(a.out, json.loads((HERE / "manifest.json").read_text())), indent=1))

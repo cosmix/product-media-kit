@@ -15,6 +15,7 @@ import soundfile as sf
 from faster_whisper import WhisperModel
 from scipy.signal import resample_poly
 
+from editkit.project import timed
 from editkit.shots import timeline
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -47,4 +48,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    with timed("edit", "words"):
+        main()

@@ -139,7 +139,7 @@ wanted and `./setup.sh --check` shows the key as not set (`/install` may have co
    type `/begin`: `GEMINI_API_KEY=<key> claude`.
 3. Never ask them to paste the key into the chat.
 4. Tell them that narration and b-roll are billed per request and that you keep a running
-   estimate in `COSTS.md`.
+   estimate in `COSTS.md`, and that `METRICS.md` records how long each operation took.
 
 Write the decisions so far to `NOTES.md` before they restart. After the restart, read `NOTES.md`
 and resume at the step it leaves off. Without a key, review audio with ffmpeg measurements. A post

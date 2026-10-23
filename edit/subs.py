@@ -12,6 +12,7 @@ import sys
 
 from editkit.assets import ROOT
 from editkit.outputs import latest_revision, output_path, read_slug, revision_arg
+from editkit.project import timed
 from editkit.shots import _words, timeline
 
 OUTPUTS = ROOT / "outputs"
@@ -125,4 +126,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    with timed("edit", "subs"):
+        main()

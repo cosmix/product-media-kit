@@ -32,6 +32,7 @@ from functools import lru_cache
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))  # the project root, for tools/
+from tools.metrics import timed  # noqa: F401 - the capture entry points import it from here
 from tools.project_settings import read as project_settings
 
 from webcap.names import check_name

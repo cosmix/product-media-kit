@@ -20,6 +20,7 @@ them to the project's usage.jsonl through tools/usage_log.py, for tools/costs.py
 
 import argparse
 import base64
+import contextlib
 import os
 import sys
 from pathlib import Path
@@ -135,6 +136,17 @@ def kit_tools() -> Path | None:
     return None
 
 
+def timer(model: str, voice: str):
+    """Time the call in the project's METRICS.md (tools/metrics.py); a no-op outside a project."""
+    tools = kit_tools()
+    if tools is None:
+        return contextlib.nullcontext()
+    sys.path.insert(0, str(tools))
+    import metrics
+
+    return metrics.timed("narration", "tts", model=model, voice=voice)
+
+
 def report_usage(model: str, usage, out: Path) -> None:
     tools = kit_tools()
     if tools is None:
@@ -160,12 +172,13 @@ def main() -> None:
     voice = resolve_voice(args.voice)
     text = read_script(args.script)
     out = output_path(args.script, args.output)
-    interaction = synthesize(args.model, text, voice, args.style)
-    report_usage(args.model, interaction.usage, out)
-    audio = base64.b64decode(interaction.output_audio.data)
-    if audio[:4] != b"RIFF":
-        sys.exit("error: response is not a WAV (missing RIFF header)")
-    out.write_bytes(audio)
+    with timer(args.model, voice):
+        interaction = synthesize(args.model, text, voice, args.style)
+        report_usage(args.model, interaction.usage, out)
+        audio = base64.b64decode(interaction.output_audio.data)
+        if audio[:4] != b"RIFF":
+            sys.exit("error: response is not a WAV (missing RIFF header)")
+        out.write_bytes(audio)
     print(f"{out} ({len(audio):,} bytes, voice {voice})")
 
 

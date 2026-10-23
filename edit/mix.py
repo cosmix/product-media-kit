@@ -29,7 +29,7 @@ from scipy.ndimage import (
 from scipy.signal import butter, lfilter, resample_poly, sosfilt, sosfiltfilt
 
 from editkit.assets import ROOT, SOUNDTRACK
-from editkit.project import edl
+from editkit.project import edl, timed
 from editkit.shots import timeline
 
 SR = 48000
@@ -284,4 +284,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    with timed("edit", "mix"):
+        main()

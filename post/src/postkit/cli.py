@@ -1,6 +1,7 @@
 """postkit build | check | add | selftest [--root DIR]."""
 
 import argparse
+import contextlib
 import re
 import sys
 from collections.abc import Sequence
@@ -13,6 +14,14 @@ from postkit.check import check, report
 
 DEFAULT_ROOT = Path(__file__).resolve().parents[3]  # post/src/postkit/cli.py -> the project root
 REVISION_RE = re.compile(r"v([1-9]\d*)")
+
+sys.path.insert(0, str(DEFAULT_ROOT))  # the project root, for tools/
+try:
+    from tools.metrics import timed
+except ImportError:  # postkit used outside a project: timing is a no-op
+
+    def timed(*_args, **_kwargs):
+        return contextlib.nullcontext()
 
 
 def _revision(text: str) -> int:
@@ -49,13 +58,14 @@ def _parser() -> argparse.ArgumentParser:
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
-    if args.command == "build":
-        return _build(args)
-    if args.command == "check":
-        return 1 if report(check(args.root, args.file)) else 0
-    if args.command == "add":
+    if args.command == "selftest":
+        return selftest.run()
+    with timed("blog", args.command):
+        if args.command == "build":
+            return _build(args)
+        if args.command == "check":
+            return 1 if report(check(args.root, args.file)) else 0
         return _add(args)
-    return selftest.run()
 
 
 def _build(args: argparse.Namespace) -> int:

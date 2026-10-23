@@ -11,6 +11,7 @@ import argparse
 import sys
 import time
 
+import metrics
 import usage_log
 from google import genai
 
@@ -20,18 +21,19 @@ p.add_argument("files", nargs="+")
 p.add_argument("--model", default="gemini-3.8-flash")
 a = p.parse_args()
 
-client = genai.Client()
-parts = []
-for f in a.files:
-    up = client.files.upload(file=f)
-    while up.state and up.state.name == "PROCESSING":
-        time.sleep(2)
-        up = client.files.get(name=up.name)
-    parts.append(f"File: {f}")
-    parts.append(up)
-parts.append(a.question)
-resp = client.models.generate_content(model=a.model, contents=parts)
-usage = usage_log.from_generate(resp.usage_metadata)
-usage_log.log("listen", a.model, usage, files=a.files)
-print(usage_log.summary(usage), file=sys.stderr)
-print(resp.text)
+with metrics.timed("judge", "listen", model=a.model, files=len(a.files)):
+    client = genai.Client()
+    parts = []
+    for f in a.files:
+        up = client.files.upload(file=f)
+        while up.state and up.state.name == "PROCESSING":
+            time.sleep(2)
+            up = client.files.get(name=up.name)
+        parts.append(f"File: {f}")
+        parts.append(up)
+    parts.append(a.question)
+    resp = client.models.generate_content(model=a.model, contents=parts)
+    usage = usage_log.from_generate(resp.usage_metadata)
+    usage_log.log("listen", a.model, usage, files=a.files)
+    print(usage_log.summary(usage), file=sys.stderr)
+    print(resp.text)

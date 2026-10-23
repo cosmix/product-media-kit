@@ -26,12 +26,20 @@ places a line at a fixed time without adding a scene or shifting anything. A sec
 its take in final/ if there is one, else `duration`, else the reading time of `text`. A scene's
 key is `key`, else the name after its first "_".
 """
+import contextlib
 import json
 import subprocess
 import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
+sys.path.insert(0, str(HERE.parent))  # the project root, for tools/
+try:
+    from tools.metrics import timed
+except ImportError:  # run outside a project: timing is a no-op
+
+    def timed(*_args, **_kwargs):
+        return contextlib.nullcontext()
 
 # Reading time of on-screen text: max(min_hold, len(text) / reading_cps + pad). About 15
 # characters per second is the common subtitle guideline for comfortable reading; min_hold keeps
@@ -157,11 +165,12 @@ def main() -> None:
         for name, take_ in read("sources.json").items():
             print(name, *(take_ if isinstance(take_, list) else [take_]))
         return
-    spec = read("sections.json")
-    validate(spec)
-    rows = place(spec)
-    tl = build(spec, rows)
-    (HERE / "timeline.json").write_text(json.dumps(tl, indent=1) + "\n")
+    with timed("narration", "build_timeline"):
+        spec = read("sections.json")
+        validate(spec)
+        rows = place(spec)
+        tl = build(spec, rows)
+        (HERE / "timeline.json").write_text(json.dumps(tl, indent=1) + "\n")
     marks = {"take": "", "duration": "silent", "est": "silent ~est (from text: confirm at review)"}
     for r, sc in zip(rows, tl["scenes"]):
         print(f'{sc["scene"]:>2} scene@{sc["start"]:>6}  {sc["name"]:<15} {r["start"]:>7} - {r["end"]:>7}  '

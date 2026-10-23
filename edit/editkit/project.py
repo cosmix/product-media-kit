@@ -5,12 +5,21 @@ It must define `END` (the video's last frame, seconds) and `build() -> editkit.s
 ducks the melody further) are optional.
 """
 
+import contextlib
 import importlib
 import sys
 from functools import lru_cache
 from pathlib import Path
 
 EDIT = Path(__file__).resolve().parents[1]
+
+sys.path.insert(0, str(EDIT.parent))  # the project root, for tools/
+try:
+    from tools.metrics import timed
+except ImportError:  # the package used outside a project: timing is a no-op
+
+    def timed(*_args, **_kwargs):
+        return contextlib.nullcontext()
 
 
 @lru_cache(maxsize=1)

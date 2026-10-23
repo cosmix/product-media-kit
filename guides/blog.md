@@ -202,6 +202,9 @@ uv run postkit check --file ../outputs/blog/draft-acme-launch-v2.md
 All take `--root DIR` (default: the project root). `project.json` must exist
 (`project.json: missing (install.sh writes it)` otherwise).
 
+Every build, check and add run is timed under the `blog` category in `METRICS.md` at the project
+root. Rebuild that report with `uv run tools/metrics.py` from the project root.
+
 **`build`** reads `post/draft.md`, `post/images.json`, `design.json` and the capture manifests,
 validates every input first and writes nothing when any is wrong; it then lists every problem at
 once, one per line: a missing `project.json` or `draft.md`, empty alt text, an unknown shot (with

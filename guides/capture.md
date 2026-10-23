@@ -7,6 +7,9 @@ source. Read [README.md](../README.md), "Code that needs your product", "Reuse b
 "`claims.md` and `scenarios.md`" first: the scenarios to capture, their media and the fixture
 story come from `scenarios.md`.
 
+Capture runs are timed in `METRICS.md` at the project root: web captures under `capture-web`,
+terminal captures under `capture-tui`.
+
 - [Web capture](#web-capture)
 - [TUI capture](#tui-capture)
 - [Manifests](#manifests)

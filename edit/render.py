@@ -31,7 +31,7 @@ from editkit.compositor import PREVIEW, Compositor, Quality, project_fps
 from editkit.decode import probe
 from editkit.hw import fast_h264
 from editkit.outputs import latest_revision, output_path, read_slug, revision_arg
-from editkit.project import edl
+from editkit.project import edl, timed
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE / "out"
@@ -183,7 +183,13 @@ def main() -> None:
     a = ap.parse_args()
     if a.range and min(a.range) < 0:
         ap.error("--range times must be 0 or more")
+    mode = ("share" if a.share else "frames" if a.frames else "contact" if a.contact
+            else "range" if a.range else "preview" if a.preview else "final")
+    with timed("edit", f"render {mode}", **({"range": a.range} if a.range else {})):
+        render(a)
 
+
+def render(a: argparse.Namespace) -> None:
     slug = read_slug(assets.ROOT)
     if a.share:
         return share(slug, a.revision)

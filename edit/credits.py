@@ -10,7 +10,7 @@ import argparse
 from editkit import credit_data as cd
 from editkit.assets import ROOT
 from editkit.outputs import output_path, read_slug, revision_arg
-from editkit.project import edl
+from editkit.project import edl, timed
 
 OUTPUTS = ROOT / "outputs"
 
@@ -38,4 +38,5 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    with timed("edit", "credits"):
+        main()
