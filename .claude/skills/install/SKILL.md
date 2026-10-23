@@ -41,7 +41,9 @@ after a restart): skip to step 3. Otherwise run:
 ./install.sh <dir> --no-system
 ```
 
-Do not pass `--fps` or `--piano` here: they make `install.sh` run `configure.sh`, which step 5 does
+`install.sh` first updates the kit with `git pull --ff-only` when the kit is a git checkout with an
+upstream. If that fails it exits 1 and writes nothing: show the git error and ask whether to rerun
+with `--no-pull`, which installs the local copy as is. Do not pass `--fps` or `--piano` here: they make `install.sh` run `configure.sh`, which step 5 does
 once the machine is ready. Read the output; relay the slug note if there is one.
 
 ## 3. System packages

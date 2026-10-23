@@ -71,14 +71,137 @@ def test_reinstall_without_force_lists_conflicts(
 def test_missing_claude_project_fails_before_writing(
     fake_kit: Path, tmp_path: Path
 ) -> None:
-    (fake_kit / "claude-project.md").unlink()
+    (fake_kit / "CLAUDE-project.md").unlink()
     dest = tmp_path / "launch-week"
 
     proc = run_install(fake_kit, dest)
 
     assert proc.returncode == 1
-    assert "claude-project.md missing" in proc.stderr
+    assert "CLAUDE-project.md missing" in proc.stderr
     assert not dest.exists()
+
+
+def git(cwd: Path, *args: str) -> str:
+    env = {
+        **os.environ,
+        "GIT_AUTHOR_NAME": "t",
+        "GIT_AUTHOR_EMAIL": "t@example.com",
+        "GIT_COMMITTER_NAME": "t",
+        "GIT_COMMITTER_EMAIL": "t@example.com",
+    }
+    return subprocess.run(
+        ["git", *args], cwd=cwd, env=env, check=True, capture_output=True, text=True
+    ).stdout
+
+
+def push_new_file(origin: Path, tmp_path: Path, name: str) -> None:
+    """Commit `name` to origin through a second clone."""
+    other = tmp_path / "other"
+    git(tmp_path, "clone", "-q", str(origin), str(other))
+    (other / name).write_text("new\n")
+    git(other, "add", name)
+    git(other, "commit", "-q", "-m", f"add {name}")
+    git(other, "push", "-q")
+
+
+@pytest.fixture
+def git_kit(fake_kit: Path, tmp_path: Path) -> tuple[Path, Path]:
+    """(origin, kit): the fake kit as a clone of a bare origin, with an upstream."""
+    origin = tmp_path / "origin.git"
+    git(tmp_path, "init", "-q", "--bare", "-b", "main", str(origin))
+    git(fake_kit, "init", "-q", "-b", "main")
+    git(fake_kit, "add", "-A")
+    git(fake_kit, "commit", "-q", "-m", "kit")
+    git(fake_kit, "remote", "add", "origin", str(origin))
+    git(fake_kit, "push", "-q", "-u", "origin", "main")
+    return origin, fake_kit
+
+
+def test_install_pulls_the_kit_and_restarts_once(
+    git_kit: tuple[Path, Path], tmp_path: Path
+) -> None:
+    origin, kit = git_kit
+    push_new_file(origin, tmp_path, "newtool.py")
+    dest = tmp_path / "launch-week"
+
+    proc = run_install(kit, dest)
+
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert (dest / "newtool.py").read_text() == "new\n"
+    assert proc.stdout.count("Updating the kit from origin/main") == 1
+    assert proc.stdout.count("restarting the install") == 1
+
+
+def test_install_up_to_date_kit_does_not_restart(
+    git_kit: tuple[Path, Path], tmp_path: Path
+) -> None:
+    _, kit = git_kit
+
+    proc = run_install(kit, tmp_path / "launch-week")
+
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert "The kit is up to date." in proc.stdout
+    assert "restarting" not in proc.stdout
+
+
+def test_no_pull_skips_the_update(git_kit: tuple[Path, Path], tmp_path: Path) -> None:
+    origin, kit = git_kit
+    push_new_file(origin, tmp_path, "newtool.py")
+    dest = tmp_path / "launch-week"
+
+    proc = run_install(kit, dest, "--no-pull")
+
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert not (dest / "newtool.py").exists()
+    assert "Updating the kit" not in proc.stdout
+
+
+def test_failed_pull_exits_1_and_writes_nothing(
+    git_kit: tuple[Path, Path], tmp_path: Path
+) -> None:
+    origin, kit = git_kit
+    shutil.rmtree(origin)
+    dest = tmp_path / "launch-week"
+
+    proc = run_install(kit, dest)
+
+    assert proc.returncode == 1
+    assert "--no-pull" in proc.stderr
+    assert not dest.exists()
+
+
+def test_bad_arguments_exit_2_before_any_pull(
+    git_kit: tuple[Path, Path], tmp_path: Path
+) -> None:
+    origin, kit = git_kit
+    shutil.rmtree(origin)
+
+    proc = run_install(kit, tmp_path / "launch-week", "--bogus")
+
+    assert proc.returncode == 2
+    assert "unknown option" in proc.stderr
+
+
+def test_kit_without_git_checkout_notes_and_continues(
+    fake_kit: Path, tmp_path: Path
+) -> None:
+    proc = run_install(fake_kit, tmp_path / "launch-week")
+
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert "the kit was not updated" in proc.stderr
+    assert "not a git checkout" in proc.stderr
+
+
+def test_kit_without_upstream_notes_and_continues(
+    git_kit: tuple[Path, Path], tmp_path: Path
+) -> None:
+    _, kit = git_kit
+    git(kit, "branch", "--unset-upstream")
+
+    proc = run_install(kit, tmp_path / "launch-week")
+
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+    assert "the kit was not updated: the current branch has no upstream" in proc.stderr
 
 
 def test_help_names_slug_and_project_json() -> None:

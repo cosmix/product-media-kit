@@ -40,7 +40,7 @@ tar -C "$KIT" -cf "$H/kit.tar" -T "$H/files"
 tar -C "$H/kit" -xpf "$H/kit.tar"
 
 step "install the kit into $P"
-"$H/kit/install.sh" "$P" --no-system
+"$H/kit/install.sh" "$P" --no-system --no-pull
 
 step "check the install"
 need CLAUDE.md

@@ -1,22 +1,22 @@
 #!/usr/bin/env bash
 # Copy this kit into a project folder: the tools, README.md, the project's CLAUDE.md (from
-# claude-project.md), every skill in claude-skills/ under .claude/skills/, project.json and the
+# CLAUDE-project.md), every skill in claude-skills/ under .claude/skills/, project.json and the
 # project's Claude Code settings; then install the system packages with the project's
 # system-deps.sh. Needs bash and the standard tools it calls: cat, cp, dirname, find, grep, head,
 # mkdir, paste, sed, sort, tar, tr.
-#   ./install.sh <project-dir> [--force] [--no-system] [--setup] [--fps N --piano vsco|salamander]
+#   ./install.sh <project-dir> [--force] [--no-pull] [--no-system] [--setup] [--fps N --piano vsco|salamander]
 set -euo pipefail
 KIT="$(cd "$(dirname "$0")" && pwd -P)"
 
 usage() {
   cat <<'EOF'
-Usage: ./install.sh <project-dir> [--force] [--no-system] [--setup] [--fps N --piano vsco|salamander]
+Usage: ./install.sh <project-dir> [--force] [--no-pull] [--no-system] [--setup] [--fps N --piano vsco|salamander]
 
 Copies the kit into <project-dir> (created if missing). The project's slug comes from the folder
 name (lowercase, other characters become single hyphens; "project" when nothing is left); a note
 says so when it differs from the folder name.
   the kit's tools, guides and README.md                       -> <project-dir>/
-  claude-project.md                                           -> <project-dir>/CLAUDE.md
+  CLAUDE-project.md                                           -> <project-dir>/CLAUDE.md
   claude-skills/<skill>/ (each skill: brand, ...)             -> <project-dir>/.claude/skills/<skill>/
   claude-settings.json (agent teams on, frontend-design plugin) -> <project-dir>/.claude/settings.json,
                                                                  only when the project has none
@@ -28,6 +28,11 @@ captures/, outputs/ and downloaded sample libraries (music/samples/) are not cop
   --force   overwrite files that already exist in <project-dir> (no file is ever deleted),
             except .gitignore, music/CREDITS.md, broll/CREDITS.md and project.json, which
             the project owns and which are written only when absent
+  --no-pull do not update the kit first. Otherwise, when the kit folder is a git checkout whose
+            branch has an upstream, the install runs `git pull --ff-only` there and, when that
+            brought new commits, restarts itself from the updated script. If the pull fails the
+            install exits 1 before writing anything; rerun with --no-pull to install the local
+            copy as is. A kit that is not a git checkout is installed as is, with a note.
   --no-system  do not run <project-dir>/system-deps.sh after copying. That script installs the
             system packages (ffmpeg, Mesa, fonts, uv, ...) and asks for your password; skip it
             when you have no administrator rights and give `./system-deps.sh --dry-run` output
@@ -40,13 +45,15 @@ Without --force the install stops, writing nothing, if any file it would write a
 EOF
 }
 
-TARGET="" FORCE=0 SETUP=0 SYSTEM=1 FPS="" PIANO=""
+TARGET="" FORCE=0 SETUP=0 SYSTEM=1 PULL=1 FPS="" PIANO=""
+ARGS=("$@")
 while [ $# -gt 0 ]; do
   case "$1" in
     -h|--help) usage; exit 0 ;;
     --force) FORCE=1 ;;
     --setup) SETUP=1 ;;
     --no-system) SYSTEM=0 ;;
+    --no-pull) PULL=0 ;;
     --fps)
       [ $# -ge 2 ] && [[ "$2" =~ ^[0-9]+$ ]] && [ "$2" -ge 1 ] && [ "$2" -le 120 ] ||
         { echo "--fps needs a whole number from 1 to 120" >&2; exit 2; }
@@ -91,6 +98,33 @@ esac
 if [ -e "$DEST" ] && [ ! -d "$DEST" ]; then echo "refusing: $DEST is not a directory" >&2; exit 2; fi
 SKILLS_DEST="$DEST/.claude/skills"
 
+# update_kit: fast-forward the kit's git checkout so a project gets the latest kit. A kit that cannot
+# be updated (no git, not a checkout, detached HEAD, no upstream) is installed as is, with a note;
+# a pull that fails exits 1 before anything is written. When the pull brought new commits the
+# script may itself have changed, so it restarts with PMK_PULLED=1 to keep from pulling again.
+update_kit() {
+  local top up before out
+  skip() { echo "Note: the kit was not updated: $1." >&2; }
+  command -v git >/dev/null 2>&1 || { skip "git is not installed"; return 0; }
+  top="$(git -C "$KIT" rev-parse --show-toplevel 2>/dev/null)" && top="$(cd "$top" && pwd -P)" || top=""
+  [ "$top" = "$KIT" ] || { skip "$KIT is not a git checkout"; return 0; }
+  git -C "$KIT" symbolic-ref -q HEAD >/dev/null 2>&1 || { skip "the kit's HEAD is detached"; return 0; }
+  up="$(git -C "$KIT" rev-parse --abbrev-ref '@{upstream}' 2>/dev/null)" || { skip "the current branch has no upstream"; return 0; }
+  before="$(git -C "$KIT" rev-parse HEAD)"
+  echo "Updating the kit from $up (git pull --ff-only) ..."
+  out="$(git -C "$KIT" pull --ff-only 2>&1)" || {
+    printf '%s\n' "$out" >&2
+    echo "Could not update the kit; nothing was written. Rerun with --no-pull to install the local copy as is." >&2
+    exit 1
+  }
+  if [ "$(git -C "$KIT" rev-parse HEAD)" != "$before" ]; then
+    echo "The kit changed; restarting the install from the updated script."
+    PMK_PULLED=1 exec "$BASH" "$KIT/install.sh" ${ARGS[@]+"${ARGS[@]}"}
+  fi
+  echo "The kit is up to date."
+}
+if [ "$PULL" = 1 ] && [ -z "${PMK_PULLED:-}" ]; then update_kit; fi
+
 # the folder name is the project slug, normalised: lowercase, other characters to single hyphens
 FOLDER="${DEST##*/}"
 SLUG="$(printf '%s' "$FOLDER" | tr '[:upper:]' '[:lower:]' | LC_ALL=C sed -E 's/[^a-z0-9]+/-/g; s/^-+//; s/-+$//')"
@@ -108,8 +142,8 @@ list_files() {
 }
 
 # development files and the kit's own project files do not belong in a project folder
-[ -f "$KIT/claude-project.md" ] || { echo "kit is incomplete: claude-project.md missing" >&2; exit 1; }
-KIT_LIST="$(list_files "$KIT" ./install.sh ./claude-skills ./claude-settings.json ./claude-project.md ./CLAUDE.md \
+[ -f "$KIT/CLAUDE-project.md" ] || { echo "kit is incomplete: CLAUDE-project.md missing" >&2; exit 1; }
+KIT_LIST="$(list_files "$KIT" ./install.sh ./claude-skills ./claude-settings.json ./CLAUDE-project.md ./CLAUDE.md \
   ./doc ./tests ./.claude ./.loom ./.worktrees ./captures ./outputs)"
 # project-owned records: copied only when absent, never overwritten, even with --force
 KEEP_LIST="./.gitignore
@@ -167,7 +201,7 @@ copy_tree() {
 COPYING=0
 trap '[ "$?" = 0 ] || [ "$COPYING" != 1 ] || echo "install failed partway: rerun the same ./install.sh command with --force to finish it" >&2' EXIT
 copy_tree "$KIT" "$DEST" "$COPY_LIST"
-cp "$KIT/claude-project.md" "$DEST/CLAUDE.md"
+cp "$KIT/CLAUDE-project.md" "$DEST/CLAUDE.md"
 while IFS= read -r s; do
   copy_tree "$KIT/claude-skills/$s" "$SKILLS_DEST/$s" "$(list_files "$KIT/claude-skills/$s")"
 done <<<"$SKILLS"
