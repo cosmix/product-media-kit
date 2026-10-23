@@ -40,5 +40,8 @@ Optional: your brand guidelines (`BRAND.md`) and logo and fonts (`brand/`), at a
 
 Coming back later: start `claude` in the project folder the same way; it picks up where it stopped.
 
+Claude keeps `METRICS.md` with how long each step took. To keep the b-roll for other videos, ask
+Claude, or run `./export-broll.sh <dest-dir>` and upload the folder.
+
 Everything else (review, where the files land, sharing, updating, troubleshooting): ask Claude, or
 see README.md, "For the human".

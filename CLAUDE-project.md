@@ -21,8 +21,8 @@ machine check, the kickoff interview, the Gemini key, the brand, the records and
 
 ## Later sessions (`NOTES.md` exists)
 
-Read `NOTES.md`, `HANDBOOK.md` and `COSTS.md` if present, `claims.md` and `scenarios.md` if present, and per
-medium in `project.json`:
+Read `NOTES.md`, `HANDBOOK.md`, `COSTS.md` and `METRICS.md` if present, `claims.md` and
+`scenarios.md` if present, and per medium in `project.json`:
 
 - video: `edit/ISSUES.md` and `narration/timeline.json`;
 - blog: `post/outline.md`.
@@ -141,7 +141,14 @@ particular), then the sections for its role before starting:
   `usage.jsonl`; `uv run tools/costs.py` prices them with your `rates.json` and rewrites
   `COSTS.md`, which is never hand-edited. Run it after every batch of calls and give the human the
   total with each preview and before a large batch.
+- `METRICS.md` (project root) is the generated record of how long each operation took, per category
+  (`capture-web`, `capture-tui`, `narration`, `judge`, `broll`, `motion`, `music`, `edit`, `blog`).
+  Every entry point appends a line to `metrics.jsonl` and rewrites it; never hand-edit it. Time a
+  shell step of your own with `uv run tools/metrics.py run <category> <operation> -- <cmd>`, and
+  rebuild the report with `uv run tools/metrics.py`. Read it before estimating a batch, and give the
+  human the slowest operations when you report after one.
 - B-roll is generated with Gemini Omni only (`tools/genvideo.py`), never Veo.
+- When the human wants the b-roll kept for other videos, run `./export-broll.sh <dest-dir>` (`guides/video.md`, "Exporting b-roll for reuse"); the destination must be outside the project.
 - Previews before masters: render the master only after your OK, and hold it while any upstream
   asset is being re-rendered.
 

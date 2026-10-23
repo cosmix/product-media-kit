@@ -55,7 +55,7 @@ def test_install_excludes_dev_tree(fake_kit: Path, tmp_path: Path) -> None:
         "install.sh",
         "claude-skills",
         "claude-settings.json",
-        "claude-project.md",
+        "CLAUDE-project.md",
         "captures",
         "outputs",
     ):

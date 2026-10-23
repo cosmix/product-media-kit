@@ -12,7 +12,7 @@ KIT = Path(__file__).resolve().parents[1]
 REQUIRED = (
     "README.md",
     "HUMAN.md",
-    "claude-project.md",
+    "CLAUDE-project.md",
     "guides/capture.md",
     "guides/blog.md",
     "guides/video.md",
@@ -22,7 +22,8 @@ REQUIRED = (
 MODULE_ROOTS = tuple(KIT / p for p in ("fixtures/web", "fixtures/tui/src", "post/src", "edit", "motion", "music"))
 SCRIPT_DIRS = tuple(KIT / p for p in ("", "edit", "motion", "music", "narration", "post", "fixtures/web", "fixtures/tui"))
 SHELL_SCRIPTS = ("setup.sh", "install.sh", "system-deps.sh", "inflate.sh")
-WRAPPERS = {"configure.sh": "tools/project_settings.py", "export.sh": "tools/export_project.py"}  # exec argparse
+WRAPPERS = {"configure.sh": "tools/project_settings.py", "export.sh": "tools/export_project.py",
+            "export-broll.sh": "tools/export_broll.py"}  # exec argparse
 PACKAGES = ("webcap", "tuicap", "postkit", "editkit")
 STALE = re.compile(
     r"product-video-[k]it|product-blog-[k]it|Product (Video|Blog) [K]it|edit/out/[i]ntro|post\.[j]son|[o]pen_scene"
@@ -213,7 +214,7 @@ def test_guide_exists(name: str) -> None:
 
 
 def test_kit_root_has_no_claude_md() -> None:
-    assert not (KIT / "CLAUDE.md").exists(), "the kit root's CLAUDE.md is gone: claude-project.md is installed as CLAUDE.md"
+    assert not (KIT / "CLAUDE.md").exists(), "the kit root's CLAUDE.md is gone: CLAUDE-project.md is installed as CLAUDE.md"
     assert (KIT / "doc/mac_port_testing.md").is_file()
     assert not (KIT / "mac_port_testing.md").exists()
 

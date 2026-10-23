@@ -26,7 +26,7 @@ The guides:
 | [`guides/video.md`](guides/video.md)     | the video: roles, phases, narration, music, motion graphics, b-roll, the edit, the mix, subtitles, encoding, video QA       |
 | [`guides/blog.md`](guides/blog.md)       | the blog post: roles, phases, the draft, image treatment, building and checking, blog QA                                    |
 | [`HUMAN.md`](HUMAN.md)                   | the human's guide                                                                                                           |
-| `CLAUDE.md`                              | the project instructions every agent session loads (`claude-project.md` in the kit)                                         |
+| `CLAUDE.md`                              | the project instructions every agent session loads (`CLAUDE-project.md` in the kit)                                         |
 
 ## Contents
 
@@ -118,7 +118,7 @@ What both media use; each medium guide lists its own tools.
 ## How the kit is used
 
 One kit serves many projects. The kit folder holds the engine, the guides, `HUMAN.md`, the
-project instructions (`claude-project.md`) and the Claude Code skills; nobody works inside it
+project instructions (`CLAUDE-project.md`) and the Claude Code skills; nobody works inside it
 except to install. For each project:
 
 1. The human starts `claude` in the kit folder and types `/install`. The kit's own `install`
@@ -126,7 +126,7 @@ except to install. For each project:
    goes and what to make, runs `./install.sh <project-dir> --no-system`, has the human run
    `./system-deps.sh` in a second terminal, saves the video's choices and runs `./setup.sh`
    ([Install into a project](#install-into-a-project)). `install.sh` creates the project folder
-   with the engine, the guides, `CLAUDE.md` (from `claude-project.md`), `project.json` and the
+   with the engine, the guides, `CLAUDE.md` (from `CLAUDE-project.md`), `project.json` and the
    skills in `.claude/skills/`, and refuses a target inside the kit folder.
 2. The human starts `claude` in the project folder and types `/begin`. The lead session asks the
    interview and the rest ([Kickoff](#kickoff)).
@@ -199,8 +199,9 @@ without a GPU; Claude says what it is waiting on.
 The post links its images relatively (`images/<file>`), so publish the final `.md` together with
 `outputs/blog/images/`. Claude gives the paths when it finishes. The project folder also holds
 `NOTES.md` (every decision), `HANDBOOK.md`, `COSTS.md` (the estimated spend on narration and
-b-roll, when the video has them) and the code that renders and captures everything, so a later
-session can change either medium or recapture after a product change.
+b-roll, when the video has them), `METRICS.md` (how long each operation took) and the code that
+renders and captures everything, so a later session can change either medium or recapture after a
+product change.
 
 **Coming back later.** Start `claude` in the project folder and say what to change. Claude reads
 `NOTES.md`, `HANDBOOK.md` and the plans of each medium, runs `./setup.sh --check` once and resumes.
@@ -373,18 +374,25 @@ this update before it can be exported.
 ### Install into a project
 
 ```bash
-./install.sh <project-dir> [--force] [--no-system] [--setup] [--fps N --piano vsco|salamander]
+./install.sh <project-dir> [--force] [--no-pull] [--no-system] [--setup] [--fps N --piano vsco|salamander]
 ```
+
+Before copying, `install.sh` updates the kit: when the kit folder is a git checkout whose branch has
+an upstream, it runs `git pull --ff-only` there and, if that brought new commits, restarts itself
+from the updated script. A pull that fails (offline, diverged history, local changes in the way)
+exits 1 before anything is written; rerun with `--no-pull` to install the local copy as is. A kit
+that is not a git checkout (an unpacked tarball), has a detached HEAD or has no upstream is
+installed as is, with a note. Wrong arguments exit 2 before any pull.
 
 `install.sh` copies the kit into `<project-dir>` (created if missing; a relative path is fine, a
 path inside the kit folder is refused):
 
 - every top-level item of the kit except the development files (`install.sh`, `doc/`, `tests/`,
   `.claude/`, `.loom/`, `.worktrees/`, a kit-root `CLAUDE.md`) and the three items copied
-  elsewhere below (`claude-project.md`, `claude-skills/`, `claude-settings.json`), with
+  elsewhere below (`CLAUDE-project.md`, `claude-skills/`, `claude-settings.json`), with
   executable bits and dotfiles; environments (`.venv`), caches, `out/`, `build/`, `captures/`,
   `outputs/` and `music/samples/` are left out;
-- `claude-project.md` as `CLAUDE.md`, the instructions every agent session in the project reads;
+- `CLAUDE-project.md` as `CLAUDE.md`, the instructions every agent session in the project reads;
 - every skill under `claude-skills/` to `.claude/skills/<name>/`: `brand`, `narration`,
   `begin`. A new skill added to `claude-skills/` also goes into `KIT_SKILLS` in `setup.sh`, the
   list it checks. The kit's own `install` skill lives in `.claude/skills/install/` and is not
@@ -533,6 +541,12 @@ cd acme-launch
 scopes itself from `project.json` `media` and fetches the sample libraries `piano` selects,
 Chromium and the Whisper model. `--no-samples` passes through to `setup.sh`. It needs network
 access. API keys never travel in the archive: set `GEMINI_API_KEY` on the recipient's machine.
+
+`export-broll.sh <dest-dir>` copies every generated b-roll clip, used in a video or not, and every
+credited stock clip into `<dest-dir>/<slug>/` with a contact sheet and metadata per clip, and
+merges the project into `<dest-dir>/catalog.json` and `CATALOG.md`. Upload the folder to a shared
+drive or bucket; exports from many projects accumulate into one library. See `guides/video.md`,
+"Exporting b-roll for reuse".
 
 ## The team
 
@@ -772,8 +786,8 @@ file.
 
 | Folder                                       | Medium | Engine (in the kit)                                                                                                                                                                                                                                            | Files the project writes                                                                                                                                                                                                 |
 | -------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| project root                                 | both   | `README.md`, `HUMAN.md`, `CLAUDE.md`, `guides/`, `setup.sh`, `system-deps.sh`, `configure.sh`, `export.sh`, `inflate.sh`, `LICENSE`, `.gitignore`; `project.json` (written once by `install.sh`)                                                               | `BRAND.md`, `brand/`, `design.json` ([Brand](#brand)); `NOTES.md`, `HANDBOOK.md`, `claims.md`, `scenarios.md` ([Project records](#project-records)); video: `rates.json`, `COSTS.md` (generated from `usage.jsonl`)       |
-| `tools/`                                     | both   | `fonts.py` (finds the files for fonts `design.json` names by family), `project_settings.py` (`configure.sh`), `export_project.py` (`export.sh`); video: `setup-samples.sh` (sourced by `setup.sh`), `listen.py` (the listening judge), `genvideo.py` (Gemini Omni b-roll), `usage_log.py`, `costs.py` (writes `COSTS.md`) | none                                                                                                                                                                                                                     |
+| project root                                 | both   | `README.md`, `HUMAN.md`, `CLAUDE.md`, `guides/`, `setup.sh`, `system-deps.sh`, `configure.sh`, `export.sh`, `export-broll.sh`, `inflate.sh`, `LICENSE`, `.gitignore`; `project.json` (written once by `install.sh`)                                            | `BRAND.md`, `brand/`, `design.json` ([Brand](#brand)); `NOTES.md`, `HANDBOOK.md`, `claims.md`, `scenarios.md` ([Project records](#project-records)); video: `rates.json`, `COSTS.md` (generated from `usage.jsonl`); `METRICS.md` (generated from `metrics.jsonl`, both media) |
+| `tools/`                                     | both   | `fonts.py` (finds the files for fonts `design.json` names by family), `project_settings.py` (`configure.sh`), `export_project.py` (`export.sh`); video: `setup-samples.sh` (sourced by `setup.sh`), `listen.py` (the listening judge), `genvideo.py` (Gemini Omni b-roll), `usage_log.py`, `costs.py` (writes `COSTS.md`), `export_broll.py` (`export-broll.sh`, exports b-roll for reuse); both: `metrics.py` (times every entry point, writes `METRICS.md`) | none                                                                                                                                                                                                                     |
 | `claude-skills/` (in a project `.claude/skills/`) | both   | `brand/` (`SKILL.md`, `BRAND.template.md`, `check.py`), `begin/` (`SKILL.md`); video: `narration/` (`SKILL.md`, `tts.py`)                                                                                                                                     | none                                                                                                                                                                                                                     |
 | `.claude/skills/install/` (kit only)         | both   | `install/` (`SKILL.md`), never copied into a project                                                                                                                                                                                                                                                                      | none                                                                                                                                                                                                                     |
 | `fixtures/web/`                              | both   | `webcap/`: `capture` (the command), `project` (loads `product.py`, mock or live), `profiles`, `shots` (`Shooter`), `director` (frame stepping), `browser`, `boxes`, `encode`, `media`, `manifest`, `names`, `page_script`, `server`, `world` (scripted clock), `probe`, `verify`, `selftest`, `agent_session` and `ansi` (a scripted coding-agent terminal) | `product.py`: `SHOTS` and/or `CLIPS`, optional `CLIP_PATHS`, `VIEWPORT`, `THEME`, `LOCAL_STORAGE`, `FONT_PROBES`; mock mode `World` and `build_app`; live mode `BASE_URL`; plus fixture data ([guides/capture.md](guides/capture.md)) |
@@ -1170,8 +1184,8 @@ product; each medium guide adds its own.
 ## Project records
 
 The project keeps these files at its root beside the pipeline. The kit ships none of them; the
-lead creates and owns them. The video adds `edit/ISSUES.md` and `COSTS.md`
-([guides/video.md](guides/video.md)); the post adds `post/outline.md`
+lead creates and owns them. The video adds `edit/ISSUES.md` and `COSTS.md`; both media get the
+generated `METRICS.md` ([guides/video.md](guides/video.md)); the post adds `post/outline.md`
 ([guides/blog.md](guides/blog.md)).
 
 ### `NOTES.md`: the decision log

@@ -21,3 +21,7 @@ An `images` entry `frame:<shot id>`, `frame:<shot id>@last` or `frame:<shot id>@
 - `plan()` validates, then orders jobs with `graphlib` (a cycle is reported before any call). `main()` submits them parents-first to the FIFO 3-worker pool; `run_after` waits on the parents' futures, skips the child when one did not end `ok`, and otherwise re-runs `validate()` to extract fresh frames before the paid call.
 - `skip_rendered` warns of every rendered shot in shots.json (picked or not, so `--only <parent>` warns too) whose frame parent renders again this run; there is no other stale detection.
 - `<id>.json` records a frame image as `{path, sha256, source}`.
+
+## Exporting b-roll for reuse
+
+`export-broll.sh <dest-dir>` runs `tools/export_broll.py`. It exports every rendered clip in `broll/gen/omni/`, whether or not any video used it, because the user treats generated b-roll as expensive and valuable. A clip missing its `<id>.json` is still exported, with its metadata rebuilt from `broll/gen/shots.json`. Credited stock clips from `broll/candidates/` are exported as well. Each clip gets `<dest>/<slug>/<id>.mp4`, `<id>-contact.png` (12 frames, 4x3) and a `<id>.json` sidecar, and the folder gets an `INDEX.md`. `<dest>/catalog.json` and `CATALOG.md` are merged: an export replaces only its own slug's entries.

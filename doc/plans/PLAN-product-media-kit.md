@@ -16,17 +16,17 @@ BK is deleted after the merge passes its gate.
 | Rename | Names inside files only. The human renames the folder and the GitHub repo afterwards |
 | BK material | Knowledge base and tests come over, adapted; BK's git history does not |
 | Execution | This session, with subagents; no loom plan |
-| Project instructions | Kept in the kit as `claude-project.md`, copied to `<project>/CLAUDE.md` by `install.sh`; the kit root's `CLAUDE.md` is deleted so kit-development sessions never load the lead's instructions |
+| Project instructions | Kept in the kit as `CLAUDE-project.md`, copied to `<project>/CLAUDE.md` by `install.sh`; the kit root's `CLAUDE.md` is deleted so kit-development sessions never load the lead's instructions |
 | Project file | `project.json` `{"slug", "media", "fps", "piano"}`. `install.sh` writes `{"slug": "<slug>", "media": []}` only when absent and never clobbers it. Slug derived from the folder name (lowercase, non-alphanumerics to `-`, `project` when empty), never a failure. `media` is an ordered subset of `["video", "blog"]`, filled by `/mediatime`. `fps` and `piano` are saved by `./configure.sh`, which keeps every other key |
 | Frame rate | `project.json` `fps` (int 1-120, default 30 when absent) is the rate of video captures, motion and the master. `edit/edl.py` omits `FPS` and motion omits `--fps` unless the human asks for an override. A saved rate wins over any 60 fps in other instructions |
 | Piano | `project.json` `piano`: `vsco` (CC0, default) or `salamander` (CC BY 3.0, credited on screen and in the description). Salamander is never downloaded or used without the human's explicit choice; `setup.sh` fetches it only when selected; the music manifest's `sample_libraries` gates its credit |
-| Startup choices | `/mediatime` asks the frame rate (suggest 30) and, with music, the piano, and saves them with `./configure.sh --fps N --piano X`. `install.sh` never prompts; `--fps N --piano X` (both together) pre-answers. A delegated choice is 30 fps and VSCO. The kit-root `.claude/` is not installed, so these rules live in `claude-project.md`, the mediatime skill and `guides/video.md` |
+| Startup choices | `/mediatime` asks the frame rate (suggest 30) and, with music, the piano, and saves them with `./configure.sh --fps N --piano X`. `install.sh` never prompts; `--fps N --piano X` (both together) pre-answers. A delegated choice is 30 fps and VSCO. The kit-root `.claude/` is not installed, so these rules live in `CLAUDE-project.md`, the mediatime skill and `guides/video.md` |
 | Sharing | `export.sh` (`tools/export_project.py`) writes a tar.gz keeping source, media, `captures/` and `outputs/`, omitting environments, caches, `music/samples`, `music/build`, `edit/build`, `post/build`, `captures/*-selftest`, font resolution, Git history and credentials. `inflate.sh` runs `system-deps.sh` then `setup.sh`. Both ship to projects; README "Sharing a project" and HUMAN.md document them |
 | Outputs | Video files flat in `outputs/`; the blog in `outputs/blog/` with `outputs/blog/images/`. Names below |
 | Revisions | Allocated by scanning `outputs/`; no counter. Tools rewrite the latest revision of their stage by default; `--next` writes max+1; `--revision vN` names one |
 | Blog images | One `outputs/blog/images/` shared by all revisions; a rebuild replaces images in place |
 | `outputs/` in git | Not ignored: it is the deliverable |
-| Guides | `README.md` (shared), `guides/capture.md`, `guides/video.md`, `guides/blog.md`, `HUMAN.md`, `claude-project.md` |
+| Guides | `README.md` (shared), `guides/capture.md`, `guides/video.md`, `guides/blog.md`, `HUMAN.md`, `CLAUDE-project.md` |
 | Shared records | `claims.md` (claims table) and `scenarios.md` (the one fixture story, with a Media column) at the project root, used by the video script and the blog outline |
 | Capture profiles | `--for video\|blog\|both`; default from `project.json` `media`, `blog` without it |
 | Viewport | One per project: default 1920x1080 when `media` includes video, else 1440x900; `VIEWPORT` in product.py wins |
@@ -168,7 +168,7 @@ when `piano` is `salamander`. `setup.sh` never prompts.
    `system-deps.sh` for the human until `0 MISSING`.
 4. One shared interview group (product, source and PRD, audience and goal, captures and theme,
    guidance, deliverables), then each medium's own group (VK `CLAUDE.md` b; BK
-   `claude-project.md` b), skipping what is known.
+   `CLAUDE-project.md` b), skipping what is known.
 5. Gemini key when narration, b-roll or the listening judge is wanted.
 6. Brand skill.
 7. Write `project.json` `media`, `NOTES.md` (decisions by medium), `rates.json` when billed calls
@@ -177,7 +177,7 @@ when `piano` is `salamander`. `setup.sh` never prompts.
    `claims.md`, `scenarios.md`, b-roll).
 8. Start `guides/<medium>.md` Phase 1.
 
-`claude-project.md`: a first session (no `NOTES.md` or empty `media`) runs the mediatime skill
+`CLAUDE-project.md`: a first session (no `NOTES.md` or empty `media`) runs the mediatime skill
 whatever the human says first; a later session asking for the other medium reruns it.
 
 ## README section map (pinned so the guide writers agree)
@@ -209,7 +209,7 @@ Write sets are disjoint. "Import" means copy the BK file into this repo, then ad
 | 3 postkit | sonnet | `post/**` | — |
 | 4 edit | sonnet | `edit/render.py`, `edit/subs.py`, `edit/credits.py`, `edit/editkit/{assets,shots,outputs}.py`, `edit/pyproject.toml`, `edit/uv.lock` | — |
 | 5 plumbing | sonnet | `install.sh`, `setup.sh`, `system-deps.sh`, `claude-settings.json`, `.gitignore`, `claude-skills/{brand,narration}/**`, `tools/**`, `tests/**` except `test_docs_contracts.py` and `smoke.sh` | — |
-| 6a shared guides | opus | `README.md`, `guides/{capture,blog}.md`, `HUMAN.md`, `claude-project.md`, delete `CLAUDE.md`, `claude-skills/mediatime/SKILL.md`, `doc/mac_port_testing.md` (moved), `tests/test_docs_contracts.py`, `tests/smoke.sh` | 1-5 |
+| 6a shared guides | opus | `README.md`, `guides/{capture,blog}.md`, `HUMAN.md`, `CLAUDE-project.md`, delete `CLAUDE.md`, `claude-skills/mediatime/SKILL.md`, `doc/mac_port_testing.md` (moved), `tests/test_docs_contracts.py`, `tests/smoke.sh` | 1-5 |
 | 6b video guide | sonnet | `guides/video.md` | 1-5 |
 | 7 knowledge | sonnet | `doc/loom/knowledge/**` | 6a, 6b |
 

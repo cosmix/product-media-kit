@@ -8,7 +8,7 @@ import pytest
 KIT = Path(__file__).resolve().parents[1]
 
 FAKE_FILES = {
-    "claude-project.md": "# Project instructions\n",
+    "CLAUDE-project.md": "# Project instructions\n",
     "claude-settings.json": '{"env": {"CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"}}\n',
     "claude-skills/brand/SKILL.md": "---\nname: brand\n---\n# Brand\n",
     "doc/plans/x.md": "# plan\n",

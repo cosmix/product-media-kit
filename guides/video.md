@@ -984,6 +984,35 @@ candidate's licence field for Creative Commons Attribution, cut short segments, 
 sheets, and record title, channel, URL, licence and the range used in `broll/CREDITS.md`
 ([Subtitles and credits](#subtitles-and-credits)).
 
+### Exporting b-roll for reuse
+
+The lead exports a project's b-roll when the human wants it kept for other videos. Each clip goes
+out with a contact sheet and its metadata, in a folder that can be uploaded to a synced drive or a
+bucket:
+
+```bash
+./export-broll.sh <dest-dir> [--only <id>]... [--tar <file.tar.gz>] [--force]
+```
+
+- Exported: every rendered generated clip in `broll/gen/omni/`, whether a video used it or not,
+  and every candidate in `broll/candidates/` that has a `broll/CREDITS.md` section. A clip whose
+  `<id>.json` is missing or unreadable still goes out, with its prompt taken from
+  `broll/gen/shots.json` and `meta_source` set in its sidecar. A candidate matches a section when
+  its file name without `.mp4`, or without the `NN_` prefix, equals the section's name; one whose
+  name equals a generated clip's id is exported as `stock-<name>`. Unfinished renders
+  (`.<id>.tmp.mp4`) and uncredited candidates are left out.
+- Layout: `<dest-dir>/<slug>/` holds `<id>.mp4` (unchanged), `<id>-contact.png` (12 frames tiled
+  4x3), `<id>.json` (project slug, kind, prompt/model/mode or credit, duration, resolution, fps,
+  sha256, export time) and `INDEX.md`. `<dest-dir>/catalog.json` and `CATALOG.md` list every
+  project in the location; an export replaces its own project's entries and keeps the others, so
+  exports from many projects accumulate into one library.
+- A generated clip needs no attribution. A CC BY stock clip travels with its credit lines in the
+  sidecar and in `INDEX.md`; show them wherever the clip is used again.
+- Rerunning is safe: a clip whose sha256 matches is not recopied. A clip that differs from the one
+  already exported stops the run (exit 1, nothing written) until `--force` replaces it.
+- `--tar` also writes a gzip tar of the project folder and the catalog files; it refuses an
+  existing file. The destination must be outside the project.
+
 ## The edit
 
 Owner: the editor. Folder: `edit/`. Every output lands in `outputs/` under the names in
@@ -1387,6 +1416,20 @@ every model the project calls (the judge's model too), and re-reads the pricing 
 session resumes after a long gap. It runs `tools/costs.py` after every batch of calls and gives
 the human the total with each preview and before a large batch (a new shot list, a full
 re-record), with an estimate for that batch from the rows of a similar earlier one.
+
+### `METRICS.md`: how long each operation took
+
+- **`metrics.jsonl`** (project root): one JSON line per run, appended by every entry point through
+  `tools/metrics.py`: `capture-web`, `capture-tui`, `narration` (`tts.py`, `process.sh`,
+  `build_timeline.py`), `judge` (`tools/listen.py`), `broll` (one line per paid attempt, retries
+  included, plus the whole run), `motion` (per scene and mode), `music`, `edit` (`words.py`,
+  `mix.py`, `subs.py`, `credits.py`, and `render.py` as `render final`, `render preview`,
+  `render range`, `render contact`, `render frames` or `render share`) and `blog`.
+- **`METRICS.md`** (project root): generated from the log on every run, never hand-edited: a table per
+  category, a table per operation (runs, failed, total, mean, max, last run) and the last 20 runs.
+  `uv run tools/metrics.py` rebuilds it; `uv run tools/metrics.py run <category> <operation> -- <cmd>`
+  times a shell step and exits with its status. A log that cannot be written prints one `WARN metrics`
+  line and the operation carries on.
 
 ## Mistakes and pitfalls
 
