@@ -32,3 +32,7 @@ A brief states the goal and audience, the agent's part of the HANDBOOK "Brand" s
 ## Editorial rules
 
 README "Editorial rules". Record the human's own rules in `<project>/NOTES.md` as stated. Plain and accurate tone, no hype, no anthropomorphism; name things as the product's UI and help text do; never name a component after what it wraps; never claim a setting the product lacks; every claim verified against the code; no LLM-isms; alt text says what the image shows in the product's terms; code blocks name their language and use the fixture story's names; name a category, never other companies; one fixture story; decide the length with the human at kickoff; once the human says to stop asking, the lead decides and reports.
+
+## Kit stays project-neutral
+
+Nothing under the kit (code, docstrings, comments, references, tests, guides) names a specific video, brand, product, person or customer. Code harvested from an installed project is scrubbed on the way in: its content becomes caller-supplied data, the app's identity comes from the project's design.json logo, and provenance notes (the source project's NOTES, scenarios or claims rows) are dropped. Third-party products a generator recreates (Slack, Linear, GitHub chrome and marks) are the exception, since they are the subject drawn.

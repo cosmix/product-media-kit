@@ -1,12 +1,82 @@
 """UI-like pieces for scenes: perspective panes, status glyphs, node
-connectors drawn in over time, typed code."""
+connectors drawn in over time, typed code, text in the mono face, word wrap and
+round avatars with initials."""
 
 import math
+from functools import cache
 
 import skia
 
-from . import gfx
+from . import design, gfx
 from .ease import clamp01
+
+
+@cache
+def mono_font(size):
+    """The mono face (design.json `fonts.mono`, else the system mono) at `size`."""
+    tf = skia.Typeface.MakeFromFile(design.mono(), 0)
+    if tf is None:
+        raise RuntimeError(f"skia cannot read the mono font {design.mono()}")
+    f = skia.Font(tf, size)
+    f.setSubpixel(True)
+    f.setEdging(skia.Font.Edging.kSubpixelAntiAlias)
+    return f
+
+
+def mono_width(s, size):
+    f = mono_font(size)
+    glyphs = f.textToGlyphs(s)
+    return sum(f.getWidths(glyphs)) if glyphs else 0.0
+
+
+def mono_text(canvas, s, x, y, size, color=gfx.FG, alpha=1.0, align="left"):
+    """A string in the mono face. Returns its width."""
+    if not s or alpha <= 0.001:
+        return 0.0
+    w = mono_width(s, size)
+    if align == "center":
+        x -= w / 2
+    elif align == "right":
+        x -= w
+    canvas.drawString(s, x, y, mono_font(size), skia.Paint(AntiAlias=True, Color4f=gfx.col(color, alpha)))
+    return w
+
+
+def wrap(text, size, width, weight=400):
+    """Greedy word wrap of `text` at `size` px into lines no wider than `width`."""
+    lines, cur = [], ""
+    for word in text.split():
+        trial = f"{cur} {word}".strip()
+        if cur and gfx.text_width(trial, size, weight) > width:
+            lines.append(cur)
+            cur = word
+        else:
+            cur = trial
+    return lines + [cur] if cur else lines
+
+
+def fit(text, size, width, weight=400):
+    """`text` at `size` px cut with an ellipsis to no wider than `width`; unchanged when it fits."""
+    if gfx.text_width(text, size, weight) <= width:
+        return text
+    while text and gfx.text_width(text + "…", size, weight) > width:
+        text = text[:-1]
+    return text.rstrip() + "…"
+
+
+def ink(fill):
+    """The text colour that reads on `fill`: near-black on a light fill, white on a dark one
+    (WCAG relative luminance against 0.179, the threshold design.logo picks variants by)."""
+    return "#111418" if design.luminance(fill) >= 0.179 else "#ffffff"
+
+
+def avatar(canvas, x, y, r, initials, color, alpha, size=None):
+    """A round avatar with initials, centred on (x, y), in `ink` on `color`."""
+    if alpha <= 0.002:
+        return
+    canvas.drawCircle(x, y, r, gfx.fill_paint(color, alpha))
+    size = size or r * 0.95
+    gfx.text(canvas, initials, x, y + size * 0.36, size, ink(color), 600, 0.0, alpha, align="center")
 
 
 def persp_matrix(x, y, w, h, yaw=0.0, pitch=0.0, focal=2600.0, scale=1.0, dx=0.0, dy=0.0):

@@ -1,10 +1,13 @@
 """render.py <scene> [--duration s] [--alpha] [--variants] [--contact] [--fps n] [--still t]
 render.py --selftest
+render.py --demo slack|linear|github [--still t] [--contact]
 
 Renders one scene, motion/scenes/<scene>.py (a module defining SCENE, a lib.scene.Scene
 subclass), to out/<scene>.mp4 (H.264) or a transparent out/<scene>[_alpha].mov (ProRes 4444)
 and updates out/manifest.json with the retimed marks. --selftest renders the kit's own test
-scene (a still, a contact sheet and a 2 s clip) to check the GPU and encoder."""
+scene (a still, a contact sheet and a 2 s clip) to check the GPU and encoder. --demo renders
+a recreated third-party window (lib/demo.py) with generic sample content in place of a scene,
+taking the same flags; it names no scene or --selftest and stays out of the manifest."""
 
 import argparse
 import importlib
@@ -21,6 +24,7 @@ from tools.metrics import timed
 from tools.project_settings import read as project_settings
 
 from lib import gfx
+from lib.demo import DEMOS
 from lib.encode import Writer, contact_sheet, save_png
 
 OUT = os.path.join(HERE, "out")
@@ -96,11 +100,12 @@ def movie(scene, render, transparent, args):
         if i % 120 == 0:
             print(f"  {i}/{n} frames  {time.time() - t0:5.1f}s", flush=True)
     w.close()
-    update_manifest({
-        "scene": scene.name, "key": scene.key, "file": fname, "size": [gfx.W, gfx.H], "fps": args.fps,
-        "duration": round(dur, 3), "handle": h, "window": round(scene.duration, 3), "alpha": transparent,
-        "marks": [{"t": round(m["t"] + h, 3), "event": m["event"]} for m in scene.scaled_marks()],
-    })
+    if not args.demo:                  # a demo is not a project scene: it stays out of the manifest
+        update_manifest({
+            "scene": scene.name, "key": scene.key, "file": fname, "size": [gfx.W, gfx.H], "fps": args.fps,
+            "duration": round(dur, 3), "handle": h, "window": round(scene.duration, 3), "alpha": transparent,
+            "marks": [{"t": round(m["t"] + h, 3), "event": m["event"]} for m in scene.scaled_marks()],
+        })
     print(f"{path}  {n} frames in {time.time() - t0:.1f}s")
 
 
@@ -117,6 +122,7 @@ def parse():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("scene", nargs="?", help="a module name in motion/scenes/")
     ap.add_argument("--selftest", action="store_true", help="render the kit's test scene")
+    ap.add_argument("--demo", choices=sorted(DEMOS), help="render a recreated window's demo (lib/demo.py) instead of a scene")
     ap.add_argument("--duration", type=float, default=None)
     ap.add_argument("--alpha", action="store_true", help="transparent ProRes 4444 instead of the scene default")
     ap.add_argument("--opaque", action="store_true", help="force opaque H.264")
@@ -129,8 +135,10 @@ def parse():
     ap.add_argument("--over", default=None, help="composite --still over this hex colour")
     ap.add_argument("--handle", type=float, default=0.0, help="seconds of hold added before and after the scene window")
     args = ap.parse_args()
-    if not args.selftest and not args.scene:
-        ap.error(f"name a scene (have: {', '.join(available()) or 'none yet'}) or pass --selftest")
+    if not args.selftest and not args.scene and not args.demo:
+        ap.error(f"name a scene (have: {', '.join(available()) or 'none yet'}), or pass --selftest or --demo")
+    if args.demo and (args.scene or args.selftest):
+        ap.error("--demo renders a demo in place of a scene: drop the scene name or --selftest")
     return args
 
 
@@ -141,11 +149,11 @@ def main():
         with timed("motion", "selftest"):
             selftest(gfx.Gpu(), args)
         return
-    scene = load(args.scene, args.duration)
+    scene = DEMOS[args.demo](args.duration) if args.demo else load(args.scene, args.duration)
     gpu = gfx.Gpu()
     transparent = (scene.alpha or args.alpha) and not args.opaque
     render = frame_fn(scene, gpu, transparent, args.handle)
-    name = args.scene
+    name = scene.name if args.demo else args.scene
     if args.still is not None:
         with timed("motion", f"{name} still"):
             still(scene, render, args.still, args.suffix, args.over)

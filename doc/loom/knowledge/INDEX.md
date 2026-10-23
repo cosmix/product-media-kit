@@ -26,7 +26,7 @@
 | [broll](architecture/broll.md) | genvideo.py: Omni b-roll, image modes, frame: continuity, validation, retry | 27 |
 | [edit](architecture/edit.md) | compositor, EDL asset refs, outputs naming, render, subs, credits and share copy | 24 |
 | [kit-plumbing](architecture/kit-plumbing.md) | install.sh, setup.sh, system-deps.sh, configure/export/inflate, settings… | 51 |
-| [motion](architecture/motion.md) | motion graphics renderer: scene modules, lib, encode, logo, manifest | 17 |
+| [motion](architecture/motion.md) | motion graphics renderer: scene modules, lib, encode, logo, manifest | 22 |
 | [music](architecture/music.md) | scorekit: sample libraries, score, instruments, mix, qc, render | 14 |
 | [narration](architecture/narration.md) | timeline.json the only clock, tts skill, listening judge, costs.py and… | 19 |
 | [outputs-and-reuse](architecture/outputs-and-reuse.md) | output names and revisions, twin outputs.py modules, manifest contract, reuse… | 39 |
@@ -39,7 +39,7 @@
 | Topic | Blurb | Lines |
 | --- | --- | --- |
 | [capture-pitfalls](conventions/capture-pitfalls.md) | Capture pitfalls that shaped the engines, web and TUI capture notes | 26 |
-| [kit-workflow](conventions/kit-workflow.md) | Team roles, ownership rules, briefs, workflow phases, editorial rules for both… | 34 |
+| [kit-workflow](conventions/kit-workflow.md) | Team roles, ownership rules, briefs, workflow phases, editorial rules for both… | 38 |
 
 ### mistakes
 

@@ -698,6 +698,7 @@ uv run python render.py <scene> --duration 22.83 --handle 0.5            # opaqu
 uv run python render.py <scene> --duration 22.83 --handle 0.5 --alpha    # ProRes 4444 _alpha.mov
 uv run python render.py <scene> --contact                                # 9-frame contact sheet
 uv run python render.py <scene> --still 12.0 [--over <hex>]              # one PNG, optionally composited
+uv run python render.py --demo slack --still 3.5                         # a recreated window's demo (slack, linear, github)
 ./render_all.sh                                                          # every scene in scenes.txt, both variants
 ```
 
@@ -749,7 +750,8 @@ SCENE = Title
   `soft_stroke`, `glow_stroke`, `glow_dot`, `col`, `mixcol`), `lib/logo.py` (the logo from
   `design.json`, [The logo in a scene](#the-logo-in-a-scene)), `lib/ui.py` (`persp_matrix` for a
   tilted pane, `status_glyph`, `edge_path`, `trimmed` and `draw_edge` for connectors drawn in
-  over time, `port`, `CodeLines` for typed code), `lib/ease.py` (`seg`, `lerp`, `smooth`,
+  over time, `port`, `CodeLines` for typed code, `mono_text` and `mono_width` in the `fonts.mono`
+  face, `wrap`, `avatar`), `lib/ease.py` (`seg`, `lerp`, `smooth`,
   `cubic_io`, `quint_io`, `back_out`, `spring`, `stagger`, `ease_in_linear`, ...). `text`,
   `text_width` and `text_glow` default to weight 400, `text_glow` to `ACCENT`. A helper several
   scenes share goes in `lib/` beside them.
@@ -777,6 +779,66 @@ SCENE = Title
   blurred log produced blocky glyphs.
 - A still from a scene can go to the blog: `uv run postkit add motion/<scenario>/<label> <png>`
   from `post/` (`guides/blog.md`).
+
+**Slack, Linear and GitHub windows.** When the product works inside Slack, Linear or GitHub, a
+scene draws that app's window in code instead of capturing it. `lib/` recreates each one in its
+theme (Slack's default Aubergine: an aubergine frame around a dark message pane;
+Linear's and GitHub's dark themes), its layout and its own chrome strings, from the research in
+`motion/reference/` (`slack.md`, `linear.md`, `github.md`). Every name, message and number in
+them is data the scene passes in; the app's own avatar is the project's logo from `design.json`, or its initial on the
+accent colour when there is no logo.
+
+- Slack: `slack_ui.slack_window(canvas, x, y, w, h, alpha, content, reveal, highlight=0.0)` with
+  a `slack_content.SlackContent` (workspace, channels with one selected, people, viewer, app,
+  earlier messages, the app's `Post`). `reveal` brings the post in under the earlier messages,
+  `highlight` lights its links; it returns the message rect, the link rects and the post avatar's
+  centre `(cx, cy)` for a scene to aim at.
+- Linear: `linear_ui.linear_window(canvas, x, y, w, h, alpha, content, menu=, chosen=,
+  delegated=, status=, session=, shown=)` with a `linear_content.LinearContent` (workspace, team,
+  issue, assignee, agent, `Activity` rows with optional thoughts): the Delegate to... menu, the
+  agent hung under the assignee, Todo turning In Progress, the agent session and its activities,
+  each state 0 to 1 and timed by the scene; the session card stops above the
+  comment box (about six activities fit at a 1000 px height, fewer with thoughts).
+- GitHub: `github_pages.pulls_window(canvas, x, y, w, h, alpha, page, shown=, labels=,
+  scale=)` draws github.com/pulls from a `github_content.PullList` and returns each row's title
+  rect; `github_pages.pr_window(canvas, x, y, w, h, alpha, pr, shown=, mention=, checks=)` draws
+  a pull request's page from a `github_content.PullRequest` (a draft unless `draft=False`, which
+  shows the green Open label and "Merge pull request"; `commits` is the Commits count and
+  `checks=0` leaves the checks row out), its timeline of `Comment` and `Commit` entries arriving
+  with `shown`. List rows take `opened` and `draft`.
+- People are `win.Person(name, initials, color, active=True)`; GitHub shows `name` as the login.
+  The pieces each window is built from (`linear_ui.popover`, `github_ui.comment_box`, ...) are
+  public for a scene that lays a view out itself.
+- The windows are laid out for about 1800x1000 at (60, 40); for a smaller one, scale the canvas
+  around the call. `render.py --demo slack|linear|github` renders each with generic sample
+  content and takes `--still`, `--contact` and the other flags; `lib/demo.py` shows how a scene
+  times the states.
+
+```python
+from lib.ease import seg, smooth
+from lib.scene import Scene
+from lib.slack_content import Channel, Message, Post, SlackContent
+from lib.slack_ui import slack_window
+from lib.win import Person
+
+ASKER = Person("<name>", "<initials>", "#9fd3c7")
+CONTENT = SlackContent(
+    workspace="<workspace>", channels=(Channel("<channel>", "selected"),), people=(ASKER,),
+    viewer=ASKER, app="<product>", earlier=(Message(ASKER, "9:41 AM", "<a message>"),),
+    post=Post("9:42 AM", ("<what the app did>",), "<intro line>:", ("<link>",)))
+
+
+class Notify(Scene):
+    name, key, nominal = "notify", "notify", 5.0
+
+    def draw(self, canvas, t, opaque):
+        u = self.u(t)
+        slack_window(canvas, 60, 40, 1800, 1000, smooth(seg(u, 0.0, 0.6)), CONTENT,
+                     reveal=smooth(seg(u, 1.0, 1.7)))
+
+
+SCENE = Notify
+```
 
 **GPU gotchas**, both from mixing skia and moderngl on one GL context:
 
