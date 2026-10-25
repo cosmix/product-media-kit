@@ -48,6 +48,7 @@
 | [capture-and-postkit](mistakes/capture-and-postkit.md) | Pipefail grep, Pillow errors, guides ahead of code | 24 |
 | [loom-gates](mistakes/loom-gates.md) | Contract cwd and uv_build bound: gate mistakes that apply to this repo's… | 17 |
 | [media-kit-merge](mistakes/media-kit-merge.md) | ffmpeg colour tags, manifest merge on origin, docs citing sections by name | 31 |
+| [session-conduct](mistakes/session-conduct.md) | Lead-agent conduct: edits handed back to the user instead of made | 10 |
 
 ### concerns
 
