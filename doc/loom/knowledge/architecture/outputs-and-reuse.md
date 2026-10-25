@@ -4,7 +4,7 @@
 
 ## Output names and revisions
 
-`<project>/project.json` is `{"slug": "<slug>", "media": [...], "fps": 30, "piano": "vsco"}`; `media` is an ordered subset of `["video", "blog"]`; `fps` (1-120) and `piano` (`vsco` or `salamander`) are the video's choices, absent until `./configure.sh` saves them (readers default to 30 and vsco). Deliverables go to `outputs/` (video, flat) and `outputs/blog/` (the post, with `outputs/blog/images/`), named `<stage>-<slug>-v<N>[-<suffix>].<ext>` with stage `draft` or `final`:
+`<project>/project.json` is `{"slug": "<slug>", "media": [...], "fps": 30, "piano": "vsco", "music": "score"}`; `media` is an ordered subset of `["video", "blog"]`; `fps` (1-120), `piano` (`vsco` or `salamander`) and `music` (`score`, `lyria-3.5`, `lyria-3-clip-preview` or `none`) are the video's choices, absent until `./configure.sh` saves them (readers default to 30, vsco and score). Deliverables go to `outputs/` (video, flat) and `outputs/blog/` (the post, with `outputs/blog/images/`), named `<stage>-<slug>-v<N>[-<suffix>].<ext>` with stage `draft` or `final`:
 
 ```text
 outputs/draft-<slug>-v<N>.mp4                    render.py --preview

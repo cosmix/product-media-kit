@@ -41,7 +41,7 @@ def copy_from_kit(root: Path, *names: str) -> None:
 
 
 def test_choices_require_answers_and_persist(project: Path) -> None:
-    assert read(project) == {"fps": 30, "piano": "vsco"}
+    assert read(project) == {"fps": 30, "piano": "vsco", "music": "score"}
     with patch("sys.stdin.isatty", return_value=False), pytest.raises(ValueError, match="Ask the user"):
         configure(project)
     configure(project, 24, "vsco")
@@ -66,7 +66,7 @@ def test_configure_keeps_slug_and_media(project: Path) -> None:
 
 def test_interactive_startup(project: Path) -> None:
     with patch("sys.stdin.isatty", return_value=True), patch("builtins.input", side_effect=["", ""]):
-        assert configure(project) == {"fps": 30, "piano": "vsco"}
+        assert configure(project) == {"fps": 30, "piano": "vsco", "music": "score"}
 
 
 def test_archive_roundtrip_and_inflation(project: Path, tmp_path: Path) -> None:
@@ -139,7 +139,29 @@ def test_configure_refuses_a_bad_result_without_writing(project: Path) -> None:
 
 def test_interactive_fps_rejects_non_ascii_digits(project: Path) -> None:
     with patch("sys.stdin.isatty", return_value=True), patch("builtins.input", side_effect=["\u00b2", "24", ""]):
-        assert configure(project) == {"fps": 24, "piano": "vsco"}
+        assert configure(project) == {"fps": 24, "piano": "vsco", "music": "score"}
+
+
+def test_music_is_saved_on_its_own(project: Path) -> None:
+    write(project, "project.json", '{"slug": "x"}\n')
+    with patch("sys.stdin.isatty", return_value=False):
+        assert configure(project, music="lyria-3.5")["music"] == "lyria-3.5"
+    assert json.loads((project / "project.json").read_text()) == {"slug": "x", "music": "lyria-3.5"}
+    configure(project, 24, "vsco")
+    configure(project, music="none")
+    assert json.loads((project / "project.json").read_text()) == {
+        "slug": "x", "music": "none", "fps": 24, "piano": "vsco"}
+
+
+def test_bad_music_is_refused_without_writing(project: Path) -> None:
+    text = '{"fps": 24, "piano": "vsco", "music": "lyria-2"}\n'
+    write(project, "project.json", text)
+    with pytest.raises(ValueError, match="music must be"):
+        read(project)
+    with pytest.raises(ValueError, match="music must be"):
+        configure(project, fps=25)
+    assert (project / "project.json").read_text() == text
+    assert configure(project, music="score")["music"] == "score"
 
 
 def test_external_symlink_rejected(project: Path, tmp_path: Path) -> None:
@@ -174,22 +196,36 @@ def test_install_saves_choices_only_when_given(fake_kit: Path, project: Path, tm
     assert read(project)["fps"] == 24
 
 
+def test_install_saves_music_alone_or_with_the_pair(fake_kit: Path, project: Path, tmp_path: Path) -> None:
+    copy_from_kit(fake_kit, "configure.sh", "tools/project_settings.py")
+    alone = tmp_path / "alone"
+    proc = install(fake_kit, alone, "--music", "lyria-3-clip-preview")
+    assert proc.returncode == 0, proc.stderr
+    assert json.loads((alone / "project.json").read_text()) == {
+        "slug": "alone", "media": [], "music": "lyria-3-clip-preview"}
+    proc = install(fake_kit, project, "--music", "none", "--fps", "25", "--piano", "vsco")
+    assert proc.returncode == 0, proc.stderr
+    assert read(project) == {"slug": "video-with-spaces", "media": [], "fps": 25, "piano": "vsco", "music": "none"}
+
+
 @pytest.mark.parametrize("flags", [("--fps", "60"), ("--piano", "vsco"), ("--fps", "0", "--piano", "vsco"),
-                                   ("--fps", "30", "--piano", "grand")])
+                                   ("--fps", "30", "--piano", "grand"), ("--music", "lyria"), ("--music",)])
 def test_install_rejects_incomplete_or_bad_choices(fake_kit: Path, project: Path, flags) -> None:
     proc = install(fake_kit, project, *flags)
     assert proc.returncode == 2
     assert not (project / "project.json").exists()
 
 
-@pytest.mark.parametrize(("args", "choice", "expected"), [
-    ("--check --for video", "vsco", ["VSCO-2 CE"]),
-    ("--check --for video", "salamander", ["Salamander piano", "VSCO-2 CE"]),
-    ("--check --for blog", "salamander", []),
+@pytest.mark.parametrize(("args", "choice", "music", "expected"), [
+    ("--check --for video", "vsco", "score", ["VSCO-2 CE"]),
+    ("--check --for video", "salamander", "score", ["Salamander piano", "VSCO-2 CE"]),
+    ("--check --for blog", "salamander", "score", []),
+    ("--check --for video", "salamander", "lyria-3.5", []),
+    ("--check --for video", "vsco", "none", []),
 ])
-def test_setup_fetches_only_selected_libraries(project: Path, args, choice, expected) -> None:
+def test_setup_fetches_only_selected_libraries(project: Path, args, choice, music, expected) -> None:
     copy_from_kit(project, "setup.sh", "configure.sh", "tools/project_settings.py", "tools/setup-samples.sh")
-    configure(project, 30, choice)
+    configure(project, 30, choice, music)
     script = f'source ./setup.sh {args}; sample_set() {{ echo "LIBRARY:$1"; }}; fetch_samples'
     result = subprocess.run([BASH, "-c", script, "setup.sh"], cwd=project, check=True,
                             capture_output=True, text=True)

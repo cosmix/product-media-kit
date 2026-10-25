@@ -45,22 +45,30 @@ video is being added), ask these together, before any download or render. Saved 
 
 - **Frame rate**: suggest 30 fps; any whole number from 1 to 120. It applies to the captures,
   motion graphics and the master.
-- **Music**: whether the video has music. The sample libraries are needed only for a score with
-  sampled instruments: VSCO-2 CE, about 2.2 GB.
-- **Piano**, only with music: VSCO's upright (CC0, no attribution), unless the human explicitly
-  picks the Salamander grand piano. Explain its duty first: CC BY 3.0, credited on screen and in
-  the video description; 1.2 GB more to download. Never select or download Salamander without
-  that explicit choice.
+- **Music**: whether the video has music and, with music, its source:
+  - **Sample score** (`score`): the composer writes a score as code, rendered by scorekit from
+    sample libraries (VSCO-2 CE, about 2.2 GB). Free; reworked bar by bar.
+  - **Lyria** (Google's music model, through the Gemini API, billed; not on the free tier):
+    `lyria-3.5` makes a song of about two minutes for $0.08, `lyria-3-clip-preview` a 30-second
+    clip for $0.04. Each take is a new song from a text prompt and cannot be edited, only trimmed
+    and faded; no sample download. Needs a Gemini key with billing.
+- **Piano**, only with a sample score: VSCO's upright (CC0, no attribution), unless the human
+  explicitly picks the Salamander grand piano. Explain its duty first: CC BY 3.0, credited on
+  screen and in the video description; 1.2 GB more to download. Never select or download
+  Salamander without that explicit choice.
 
-Save them with `./configure.sh --fps <N> --piano <vsco|salamander>`; a video without music saves
-`--piano vsco`, and "you decide" saves 30 fps and VSCO. Record the choices in `NOTES.md` (step 7).
-`project.json` is the source of truth for both from here on: where another instruction names 60
+Save them with `./configure.sh --fps <N> --piano <vsco|salamander> --music <source>`, the source
+`score`, `lyria-3.5`, `lyria-3-clip-preview` or `none`; a video without a sample score saves
+`--piano vsco`, and "you decide" saves 30 fps, VSCO and `score`. Record the choices in `NOTES.md`
+(step 7). `project.json` is the source of truth from here on: where another instruction names 60
 fps, the saved rate wins. To change them later, rerun `./configure.sh` (it keeps `slug` and
-`media`), then `./setup.sh` for a new piano, and rerender what the change touches.
+`media`; `--music` can be given alone), then `./setup.sh` for a new piano or a switch to `score`,
+and rerender what the change touches.
 
 Then, with `<media>` as `video`, `blog` or `both`, run `./setup.sh --check --for <media>`. Only
 when it reports MISSING, or a medium is being added, run `./setup.sh --for <media>` (with
-`--no-samples` when the video has no music or the human is unsure) and repeat the check until the
+`--no-samples` when the video has no music or the human is unsure; a Lyria or no-music
+project skips the samples by itself) and repeat the check until the
 summary shows `0 MISSING`. WARN lines are optional; explain one only when it matters for this
 project (README "Setup" lists what each affects). A video without captures ignores the Chromium,
 tmux and terminal fonts WARNs ("web/terminal captures only").
@@ -106,8 +114,13 @@ line and ask only the new medium's group.
   - Narration: the narrator's character and the tone of voice they want (warm and confident,
     upbeat, calm and authoritative, ...), and that a Gemini key is needed. Ask the tone before
     rendering any voice.
-  - Music: genre and feel, and how to make it (compose with real sample libraries, or a local AI
-    model with a non-commercial licence).
+  - Music: the source if step 3 did not settle it (sample score, or Lyria and which model,
+    explained by length and price), then genre, feel, tempo and energy, instrumentation, the
+    arrangement (an intro or none, where the lifts are, how it ends: a stop hit, a ring-out or a
+    fade), vocals (instrumental under narration), references described in words (Lyria refuses
+    prompts that name artists or bands, so ask what each reference sounds like), and what to
+    avoid. With Lyria, say that every take carries Google's SynthID watermark, that it needs no
+    credit on screen, and that disclosing AI music is their call (`guides/video.md`, "Lyria").
   - B-roll: the kind of shots, generated with Gemini Omni, and whether they have images (a product
     photo, a screenshot, a logo) to start from; they must be their own or licensed, and go in
     `brand/` with the other brand assets.
@@ -130,15 +143,15 @@ capture. Ask whether to recapture everything for both media or pin `VIEWPORT = (
 
 ## 5. The Gemini key
 
-Narration, generated b-roll and the listening judge need `GEMINI_API_KEY`. When one of them is
+Narration, generated b-roll, Lyria music and the listening judge need `GEMINI_API_KEY`. When one of them is
 wanted and `./setup.sh --check` shows the key as not set (`/install` may have covered it already):
 
 1. Tell the human to create a key at https://aistudio.google.com/apikey with billing on: the free
-   tier allows 10 voice requests a day, which runs out during voice auditions.
+   tier allows 10 voice requests a day, which runs out during voice auditions, and no Lyria.
 2. Tell them to quit and start Claude in the project folder again with the key in front, then
    type `/begin`: `GEMINI_API_KEY=<key> claude`.
 3. Never ask them to paste the key into the chat.
-4. Tell them that narration and b-roll are billed per request and that you keep a running
+4. Tell them that narration, b-roll and Lyria music are billed per request and that you keep a running
    estimate in `COSTS.md`, and that `METRICS.md` records how long each operation took.
 
 Write the decisions so far to `NOTES.md` before they restart. After the restart, read `NOTES.md`

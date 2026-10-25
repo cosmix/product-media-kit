@@ -15,7 +15,7 @@ Both read `<project>/project.json` for the default profile and exit with a messa
 
 ## Video
 
-From each folder with `uv run`: `edit/render.py` (master, `--preview`, `--range`, `--contact`, `--share`, `--frames`), `edit/subs.py`, `edit/credits.py`, `edit/words.py`, `edit/mix.py`, `edit/bg_test.py`; `motion/render.py <scene>`; `music/render.py`; `narration/build_timeline.py` and `narration/process.sh`. Project-owned inputs: `<project>/edit/edl.py`, `motion/scenes/<scene>.py`, `<project>/music/arrangement.py`, `narration/sections.json`. See [architecture/edit](architecture/edit.md), [architecture/motion](architecture/motion.md), [architecture/music](architecture/music.md), [architecture/narration](architecture/narration.md).
+From each folder with `uv run`: `edit/render.py` (master, `--preview`, `--range`, `--contact`, `--share`, `--frames`), `edit/subs.py`, `edit/credits.py`, `edit/words.py`, `edit/mix.py`, `edit/bg_test.py`; `motion/render.py <scene>`; `music/render.py`; `music/lyria.py gen|finish|--selftest`; `narration/build_timeline.py` and `narration/process.sh`. Project-owned inputs: `<project>/edit/edl.py`, `motion/scenes/<scene>.py`, `<project>/music/arrangement.py` (or `<project>/music/lyria/prompt.md` with Lyria), `narration/sections.json`. See [architecture/edit](architecture/edit.md), [architecture/motion](architecture/motion.md), [architecture/music](architecture/music.md), [architecture/narration](architecture/narration.md).
 
 ## Project-root tools
 
@@ -23,7 +23,7 @@ PEP 723 scripts run with `uv run` from the project root: `tools/fonts.py [--chec
 
 ## Kit scripts
 
-- `./install.sh <project-dir> [--force] [--no-system] [--setup]`: copies the kit into a project; exit 2 on bad usage, 1 on conflicts or an incomplete kit.
+- `./install.sh <project-dir> [--force] [--no-pull] [--no-system] [--setup] [--fps N --piano P] [--music SOURCE]`: copies the kit into a project; exit 2 on bad usage, 1 on conflicts or an incomplete kit.
 - `./setup.sh [--check] [--for video|blog|both] [--no-samples]`: the lead runs it in the project; `--check` changes nothing; exit 1 when any item is MISSING.
 - `./system-deps.sh [--yes] [--dry-run] [--for video|blog|both]`: the only script needing administrator rights; a human runs it in their own terminal, never an agent.
 - `sh tests/smoke.sh <kit-dir>`: end-to-end install and selftests in a scratch project.

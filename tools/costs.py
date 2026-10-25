@@ -11,7 +11,7 @@ from collections import defaultdict
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-WORK = {"tts": "narration", "listen": "listening judge", "genvideo": "b-roll"}
+WORK = {"tts": "narration", "listen": "listening judge", "genvideo": "b-roll", "lyria": "music"}
 COLUMNS = ["Date", "Work", "Model", "Calls", "Failed", "Tokens in", "Tokens out", "Video s", "Estimate"]
 
 
@@ -38,6 +38,11 @@ def price(call, rates, unpriced):
     if model is None:
         unpriced.add(f"{call['model']}: no entry")
         return 0.0
+    if "per_call" in model:  # priced per successful call (Lyria: per song); a failed one costs nothing
+        if model["per_call"] is None:
+            unpriced.add(f"{call['model']}: per_call")
+            return 0.0
+        return model["per_call"] if call.get("ok", True) else 0.0
     if "per_second" in model:
         if model["per_second"] is None:
             unpriced.add(f"{call['model']}: per_second")

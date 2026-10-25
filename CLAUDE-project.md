@@ -46,8 +46,8 @@ particular), then the sections for its role before starting:
   your product", "Design system"; the scenarios in `scenarios.md`
 - narration (video with narration): `guides/video.md` "Narration", "The listening judge"; the
   voice comes from `BRAND.md`, "Voice and tone"
-- composer (video with music): `guides/video.md` "Music"; the feel comes from `BRAND.md`, "Music
-  and sound feel"
+- composer (video with music): `guides/video.md` "Music" (with Lyria, its "Lyria" subsection);
+  the feel comes from `BRAND.md`, "Music and sound feel"
 - motion designer (video): `guides/video.md` "Motion graphics", "The logo in a scene",
   "Transitions"; README "Design system"; draw the logo with `logo.draw`
 - b-roll (video with b-roll): `guides/video.md` "B-roll"
@@ -127,6 +127,10 @@ particular), then the sections for its role before starting:
   instruction names 60 fps, the saved rate wins. VSCO is the piano unless the human explicitly
   chose Salamander, which needs credit on screen and in the description; never download or use
   Salamander without that choice. A human who delegates the choice gets 30 fps and VSCO.
+- `project.json` `music` is where the music comes from: `score` (scorekit, the default when
+  absent), `lyria-3.5` or `lyria-3-clip-preview` (Google's Lyria, paid per song, through
+  `music/lyria.py`) or `none`, saved by `./configure.sh --music <source>`. A Lyria take becomes the
+  soundtrack only through `uv run lyria.py finish <take>`, after the human picked it.
 - `narration/timeline.json` is the only clock, built by `narration/build_timeline.py` with or
   without narration (silent sections are timed by `duration` or their on-screen `text`). Read it;
   never use a time from a message. When it changes, send absolute windows, not deltas.
@@ -136,9 +140,9 @@ particular), then the sections for its role before starting:
   rendering anything, then render variants in that tone for them to choose from. Choose yourself
   only when the human explicitly tells you to, and record that in `NOTES.md`. The listening judge
   screens takes for misreads; it never picks the tone or the voice.
-- `COSTS.md` is the running estimate of what narration and b-roll cost, rejected and failed calls
-  included. `tts.py`, `tools/listen.py` and `tools/genvideo.py` log each call's token counts to
-  `usage.jsonl`; `uv run tools/costs.py` prices them with your `rates.json` and rewrites
+- `COSTS.md` is the running estimate of what narration, b-roll and Lyria music cost, rejected and
+  failed calls included. `tts.py`, `tools/listen.py`, `tools/genvideo.py` and `music/lyria.py` log
+  each call to `usage.jsonl`; `uv run tools/costs.py` prices them with your `rates.json` and rewrites
   `COSTS.md`, which is never hand-edited. Run it after every batch of calls and give the human the
   total with each preview and before a large batch.
 - `METRICS.md` (project root) is the generated record of how long each operation took, per category
@@ -168,6 +172,7 @@ Kickoff and setup (README "Setup"):
 ./setup.sh --check
 ./setup.sh --for blog
 ./configure.sh --fps 30 --piano vsco               # the video's saved choices
+./configure.sh --music lyria-3.5                   # the music source, on its own
 ```
 
 Sharing (README "Sharing a project"): `./export.sh --output ../<slug>.tar.gz` writes an archive

@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
-# Sourced by setup.sh: the music sample libraries, for a video only. VSCO-2 CE always; the
-# Salamander piano only when project.json's piano is salamander (./configure.sh --get piano).
+# Sourced by setup.sh: the music sample libraries, for a video whose project.json music is score
+# (the default) only. VSCO-2 CE always; the Salamander piano only when project.json's piano is
+# salamander (./configure.sh --get piano). A Lyria soundtrack or none needs no samples.
 # fetch_archive URL DEST_ARCHIVE: resumable download, renamed only when complete. Some hosts (GitHub's
 # generated zips) ignore Range requests, so a failed resume discards the .part file and retries once.
 fetch_archive() {
@@ -60,14 +61,19 @@ sample_set() {
 fetch_samples() {
   [ "$WANT_VIDEO" = 1 ] || return 0
   section "Sample libraries"
-  if [ "$CHECK" = 0 ] && [ "$WANT_SAMPLES" = 1 ]; then mkdir -p "$SAMPLES"; fi
-  local piano err
+  local music piano err
   err="$(mktemp)"
   # a malformed project.json is reported in the summary, not an abort under set -e;
   # stderr (uv download chatter) stays out of the value and shows only in the MISSING message
-  piano="$("$ROOT/configure.sh" --get piano 2>"$err")" \
+  music="$("$ROOT/configure.sh" --get music 2>"$err")" \
+    && piano="$("$ROOT/configure.sh" --get piano 2>"$err")" \
     || { status MISSING "project.json" "$(cat "$err")"; rm -f "$err"; return 0; }
   rm -f "$err"
+  if [ "$music" != score ]; then
+    status ok "sample libraries" "not needed (project.json music is $music)"
+    return 0
+  fi
+  if [ "$CHECK" = 0 ] && [ "$WANT_SAMPLES" = 1 ]; then mkdir -p "$SAMPLES"; fi
   if [ "$piano" = salamander ]; then
     sample_set "Salamander piano" tar SalamanderGrandPianoV3_48khz24bit "1.2 GB" \
       "https://freepats.zenvoid.org/Piano/SalamanderGrandPiano/SalamanderGrandPianoV3+20161209_48khz24bit.tar.xz" \

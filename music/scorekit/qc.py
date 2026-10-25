@@ -155,7 +155,8 @@ def run_qc(out: Path, man: dict) -> dict:
                       "clicks": clicks(mix)[:20],
                       "tail_last_100ms_db": round(20 * np.log10(np.abs(mix[-SR // 10:]).max() + 1e-12), 1)},
               "sections": section_stats(mix, man)}
-    total = sum(stems.values())
-    report["stems_sum_error_db"] = round(20 * np.log10(np.abs(total - mix).max() + 1e-12), 1)
-    report["stem_clicks"] = {name: clicks(x)[:8] for name, x in stems.items()}
+    if stems:  # a finished Lyria soundtrack has none
+        total = sum(stems.values())
+        report["stems_sum_error_db"] = round(20 * np.log10(np.abs(total - mix).max() + 1e-12), 1)
+        report["stem_clicks"] = {name: clicks(x)[:8] for name, x in stems.items()}
     return report

@@ -5,12 +5,14 @@
 # system-deps.sh. Needs bash and the standard tools it calls: cat, cp, dirname, find, grep, head,
 # mkdir, paste, sed, sort, tar, tr.
 #   ./install.sh <project-dir> [--force] [--no-pull] [--no-system] [--setup] [--fps N --piano vsco|salamander]
+#                [--music score|lyria-3.5|lyria-3-clip-preview|none]
 set -euo pipefail
 KIT="$(cd "$(dirname "$0")" && pwd -P)"
 
 usage() {
   cat <<'EOF'
 Usage: ./install.sh <project-dir> [--force] [--no-pull] [--no-system] [--setup] [--fps N --piano vsco|salamander]
+                    [--music score|lyria-3.5|lyria-3-clip-preview|none]
 
 Copies the kit into <project-dir> (created if missing). The project's slug comes from the folder
 name (lowercase, other characters become single hyphens; "project" when nothing is left); a note
@@ -40,12 +42,15 @@ captures/, outputs/ and downloaded sample libraries (music/samples/) are not cop
   --setup   run <project-dir>/setup.sh after copying (after system-deps.sh) and exit with its status
   --fps N --piano vsco|salamander  save the video's frame rate (1-120) and piano library in
             project.json with ./configure.sh (both together). Without them /begin asks.
+  --music SOURCE  save where the video's music comes from in project.json with ./configure.sh:
+            score (scorekit's sample score, the default), lyria-3.5 or lyria-3-clip-preview
+            (Google's Lyria through the Gemini API) or none. Optional, with or without --fps.
 
 Without --force the install stops, writing nothing, if any file it would write already exists.
 EOF
 }
 
-TARGET="" FORCE=0 SETUP=0 SYSTEM=1 PULL=1 FPS="" PIANO=""
+TARGET="" FORCE=0 SETUP=0 SYSTEM=1 PULL=1 FPS="" PIANO="" MUSIC=""
 ARGS=("$@")
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -62,6 +67,10 @@ while [ $# -gt 0 ]; do
       [ $# -ge 2 ] && { [ "$2" = vsco ] || [ "$2" = salamander ]; } ||
         { echo "--piano needs vsco or salamander" >&2; exit 2; }
       PIANO="$2"; shift ;;
+    --music)
+      [ $# -ge 2 ] && case "$2" in score|lyria-3.5|lyria-3-clip-preview|none) true ;; *) false ;; esac ||
+        { echo "--music needs score, lyria-3.5, lyria-3-clip-preview or none" >&2; exit 2; }
+      MUSIC="$2"; shift ;;
     -*) echo "unknown option: $1 (try --help)" >&2; exit 2 ;;
     *) [ -z "$TARGET" ] || { echo "only one project folder allowed (try --help)" >&2; exit 2; }
        TARGET="$1" ;;
@@ -213,9 +222,11 @@ if [ ! -e "$DEST/project.json" ]; then
 else
   PROJECT_NOTE="kept (already in the project)"
 fi
-if [ -n "$FPS" ]; then
-  "$DEST/configure.sh" --fps "$FPS" --piano "$PIANO" >/dev/null
-  PROJECT_NOTE="$PROJECT_NOTE; $FPS fps, piano $PIANO"
+if [ -n "$FPS$MUSIC" ]; then
+  CHOICES=()
+  if [ -n "$FPS" ]; then CHOICES+=(--fps "$FPS" --piano "$PIANO"); PROJECT_NOTE="$PROJECT_NOTE; $FPS fps, piano $PIANO"; fi
+  if [ -n "$MUSIC" ]; then CHOICES+=(--music "$MUSIC"); PROJECT_NOTE="$PROJECT_NOTE; music $MUSIC"; fi
+  "$DEST/configure.sh" ${CHOICES[@]+"${CHOICES[@]}"} >/dev/null
 fi
 # the project's Claude Code settings: written once, never overwritten, since the project may add its own
 SETTINGS="$DEST/.claude/settings.json"

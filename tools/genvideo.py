@@ -180,15 +180,6 @@ def request(shot, images):
     return kw
 
 
-def slim(obj):
-    """Drop large blobs (base64 video) so metadata stays readable."""
-    if isinstance(obj, dict):
-        return {k: slim(v) for k, v in obj.items()}
-    if isinstance(obj, list):
-        return [slim(v) for v in obj]
-    return "<blob>" if isinstance(obj, str) and len(obj) > 2000 else obj
-
-
 def seconds(path):
     """Clip length from ffprobe, or None when it cannot be read (or ffprobe is missing)."""
     try:
@@ -206,7 +197,7 @@ def generate(client, shot, images, tmp):
     if vid is None or not vid.data:
         usage_log.log("genvideo", MODEL, usage_log.from_interaction(r.usage), shot=shot["id"], ok=False)
         why = f"uri delivery not handled: {vid.uri}" if vid is not None and vid.uri else \
-            f"no video returned: {slim(r.model_dump(mode='json', exclude_none=True))}"
+            f"no video returned: {usage_log.slim(r.model_dump(mode='json', exclude_none=True))}"
         raise RuntimeError(why)
     tmp.write_bytes(vid.data if isinstance(vid.data, bytes) else base64.b64decode(vid.data))
     return r
@@ -220,7 +211,7 @@ def finish(shot, images, r, tmp, attempt, t0):
     info = {"model": MODEL, "prompt": shot["prompt"], "config": OMNI_FMT,
             "task": MODES[shot["mode"]][2] if images else None, "seconds": secs,
             "seconds_taken": round(time.time() - t0, 1), "generated_at": time.strftime("%Y-%m-%dT%H:%M:%S"),
-            "attempts": attempt, "interaction": slim(r.model_dump(mode="json", exclude_none=True))}
+            "attempts": attempt, "interaction": usage_log.slim(r.model_dump(mode="json", exclude_none=True))}
     if images:
         info["mode"] = shot["mode"]
         info["images"] = [{k: i[k] for k in ("path", "sha256", "source") if k in i} for i in images]

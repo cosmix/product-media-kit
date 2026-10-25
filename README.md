@@ -146,8 +146,10 @@ the name. The slug names every deliverable ([Outputs](#outputs)). `media` is an 
 `video` and `blog`, filled by `/install` and confirmed by `/begin`; the capture engines and `setup.sh` read it for their
 defaults. `fps` (a whole number from 1 to 120) and `piano` (`vsco` or `salamander`) are the
 video's frame rate and piano library, saved by `./configure.sh --fps N --piano vsco|salamander`,
-which keeps the other keys ([Kickoff](#kickoff)). A reader that finds no `fps` uses 30, no `piano`
-VSCO. The lead owns the file; an edit keeps every key.
+which keeps the other keys ([Kickoff](#kickoff)). `music` is where the video's music comes from:
+`score` (scorekit's sample score), `lyria-3.5` or `lyria-3-clip-preview` (Google's Lyria through
+the Gemini API, `guides/video.md` "Lyria") or `none`, saved on its own by `./configure.sh --music
+<source>`. A reader that finds no `fps` uses 30, no `piano` VSCO, no `music` the sample score. The lead owns the file; an edit keeps every key.
 
 **A project is a copy.** Later kit updates do not reach existing projects. To take an update, run
 the updated kit's `./install.sh <project-dir> --force`: it overwrites the engine files that have
@@ -160,9 +162,9 @@ read it before the update and re-apply the patches after it. If a `--force` inst
 interrupted, rerun the same command to finish it.
 
 **Each project has its own environments and samples.** `setup.sh` creates the project's Python
-environments and, for a video with music, downloads its own sample libraries into
-`music/samples/`: VSCO-2 CE (about 2.2 GB download), plus the Salamander grand piano (1.2 GB) only
-when `project.json` selects it.
+environments and, for a video whose music is a sample score, downloads its own sample libraries
+into `music/samples/`: VSCO-2 CE (about 2.2 GB download), plus the Salamander grand piano (1.2 GB)
+only when `project.json` selects it. A Lyria soundtrack needs no samples.
 
 ## For the human
 
@@ -216,7 +218,9 @@ clips, claims, the made-up data, logo animations, b-roll) and starts ([Kickoff](
 **Changing the video's frame rate or piano.** Ask Claude, or run `./configure.sh --fps 24 --piano
 vsco` in the project folder; after `--piano salamander` run `./setup.sh` to download it. The rate
 applies to captures, motion graphics and the master; media rendered earlier keeps its old rate
-until it is rendered again.
+until it is rendered again. To switch the music between the sample score and Lyria, run
+`./configure.sh --music lyria-3.5` (or `lyria-3-clip-preview`, `score`, `none`); after a switch to
+`score` run `./setup.sh` for the samples.
 
 **Updating a project to a newer kit.** Run `./install.sh <project-dir> --force` from the newer
 kit, as in [How the kit is used](#how-the-kit-is-used). It runs `./system-deps.sh` again; add
@@ -310,7 +314,7 @@ this update before it can be exported.
    | Fonts               | both  | `design.json` and the families it names (through `tools/fonts.py`), the system fonts, the terminal fallback fonts                                                                                                                                                                            |
    | Claude Code skills  | both  | `brand`, `narration` and `begin` in `.claude/skills/`; a missing one means: rerun `install.sh` from the kit                                                                                                                                                                              |
    | Brand               | both  | `BRAND.md` (WARN when absent: optional), `design.json` older than a file it is built from (WARN; "The brand skill" below), the logo (video)                                                                                                                                                  |
-   | Sample libraries    | video | downloads and unpacks VSCO-2 CE, and Salamander only when `project.json` `piano` is `salamander`, into `music/samples/` (resumable; `--no-samples` skips them)                                                                                                                               |
+   | Sample libraries    | video | only when `project.json` `music` is `score` (the default): downloads and unpacks VSCO-2 CE, and Salamander only when `piano` is `salamander`, into `music/samples/` (resumable; `--no-samples` skips them)                                                                                   |
    | Chromium            | both  | the browser Playwright drives, installed with `playwright install chromium`                                                                                                                                                                                                                  |
    | Whisper model       | video | the model `edit/words.py` names, for narration word timings                                                                                                                                                                                                                                  |
    | API key             | video | `GEMINI_API_KEY` (WARN when not set)                                                                                                                                                                                                                                                         |
@@ -374,7 +378,7 @@ this update before it can be exported.
 ### Install into a project
 
 ```bash
-./install.sh <project-dir> [--force] [--no-pull] [--no-system] [--setup] [--fps N --piano vsco|salamander]
+./install.sh <project-dir> [--force] [--no-pull] [--no-system] [--setup] [--fps N --piano vsco|salamander] [--music SOURCE]
 ```
 
 Before copying, `install.sh` updates the kit: when the kit folder is a git checkout whose branch has
@@ -413,8 +417,9 @@ type `/begin`.
 The script asks nothing; the `install` skill does the asking and calls it with `--no-system`, then
 saves the choices itself after the system packages are in. `--fps N --piano vsco|salamander`, given
 together, save the video's frame rate and piano library in `project.json` with `./configure.sh`
-during the install, for a person who runs the script directly. The `begin` skill reuses saved
-values and asks only for the absent ones.
+during the install, for a person who runs the script directly. `--music score|lyria-3.5|lyria-3-clip-preview|none`
+saves the music source, with or without the pair. The `begin` skill reuses saved values and asks
+only for the absent ones.
 
 ### System packages
 
@@ -461,6 +466,7 @@ render or a capture fails in a way that might be the machine. Each reads the pro
 | motion      | video  | `uv run python render.py --selftest`             | prints `GL_RENDERER`; `out/selftest_01.50.png`, `out/selftest_contact.png` and `out/selftest.mp4` (2 s at 1920x1080, the logo if named)     |
 | edit        | video  | `uv run bg_test.py [seconds]`                    | `out/bg_test.mp4` (default 6 s at 1920x1080, the project's frame rate): the background and one browser-chrome window around a placeholder   |
 | music       | video  | `uv run render.py --selftest`                    | `out/selftest/soundtrack.wav` and stems, 17 s of synthesized C major at -16 LUFS                                                             |
+| music       | video  | `uv run lyria.py --selftest`                     | `out/selftest-lyria/soundtrack.wav`: a synthesized 117 BPM click track through the MP3 response path and `finish`; ends with `selftest ok`   |
 
 ```bash
 (cd fixtures/web && uv run python -m webcap.capture --selftest)
@@ -655,15 +661,17 @@ The `begin` skill (`.claude/skills/begin/SKILL.md` in the project) runs the kick
 1. Read `project.json` and `NOTES.md`; list the media and artefacts that exist.
 2. Confirm `media` in one line when `/install` set it and there is no `NOTES.md`; otherwise ask
    which media (video, blog post, both) and, for both, which comes first.
-3. With a video whose `fps` or `piano` is absent from `project.json`, ask them as above and save
-   them with `./configure.sh`. Check the machine with `./setup.sh --check --for <media>`; run
+3. With a video whose `fps` or `piano` is absent from `project.json`, ask them as above, with the
+   music source (sample score, Lyria with its model, or none), and save them with
+   `./configure.sh`. Check the machine with `./setup.sh --check --for <media>`; run
    `./setup.sh --for <media>` only when the check reports MISSING or a medium is added, and loop on
    `./system-deps.sh` for the human until `0 MISSING`.
 4. Interview: one shared group (product, source and PRD, audience and goal, captures and theme,
    guidance, deliverables), then each medium's own group, skipping what is known. A video may have
    no product source and no captures; the interview then asks for the material the claims come
    from.
-5. The Gemini key, when narration, b-roll or the listening judge is wanted and it is unset.
+5. The Gemini key, when narration, b-roll, Lyria music or the listening judge is wanted and it is
+   unset.
 6. The brand skill.
 7. Set or confirm `project.json` `media`; write `NOTES.md` (the decisions, by medium), `rates.json`
    when billed calls are planned and, when a medium joins a project that already has one, a reuse
@@ -752,6 +760,8 @@ video
 narration/NN_*.txt ──narration skill (Gemini TTS)──> narration/vN/*.wav ──process.sh──> narration/final/*.wav
                                                  └─build_timeline.py (sections.json)──> narration/timeline.json  (THE clock)
 timeline.json ──> music/arrangement.py ──music/render.py──> music/out/soundtrack.wav + stems + manifest.json (bar grid)
+music/lyria/prompt.md ──music/lyria.py gen (Lyria)──> music/out/lyria/take-NN.{wav,mp3,json}
+                       └─lyria.py finish <take> (timeline.json total)──> music/out/soundtrack.wav + manifest.json (measured grid, no stems)
 timeline.json ──> motion/scenes/*.py ──motion/render.py──> motion/out/<scene>.mp4 / *_alpha.mov + manifest.json (marks)
 broll/gen/shots.json ──tools/genvideo.py (Gemini Omni)──> broll/gen/omni/*.mp4 ──> broll/candidates/NN_*.mp4
 all of the above ──> edit/words.py ──> edit/edl.py ──> edit/mix.py (edit/out/mix.wav) ──> edit/render.py (GPU compositor)
@@ -793,7 +803,7 @@ file.
 | `fixtures/web/`                              | both   | `webcap/`: `capture` (the command), `project` (loads `product.py`, mock or live), `profiles`, `shots` (`Shooter`), `director` (frame stepping), `browser`, `boxes`, `encode`, `media`, `manifest`, `names`, `page_script`, `server`, `world` (scripted clock), `probe`, `verify`, `selftest`, `agent_session` and `ansi` (a scripted coding-agent terminal) | `product.py`: `SHOTS` and/or `CLIPS`, optional `CLIP_PATHS`, `VIEWPORT`, `THEME`, `LOCAL_STORAGE`, `FONT_PROBES`; mock mode `World` and `build_app`; live mode `BASE_URL`; plus fixture data ([guides/capture.md](guides/capture.md)) |
 | `fixtures/tui/`                              | both   | `src/tuicap/`: `clips` (the `tuicap` command), `capture` (pty recording, typed-command shots), `render` (pyte and skia), `shots` (`Still`), `encode`, `fonts`, `manifest`, `design`, `palette`, `glyphs`, `tmux_clip`                                            | `product.py`: `SHOTS` and/or `CLIPS`, optional `prepare()`, `TRUECOLOR`, `NOTES`; plus fixture files ([guides/capture.md](guides/capture.md))                                                                             |
 | `narration/`                                 | video  | `process.sh`, `build_timeline.py`                                                                                                                                                                                                                             | `NN_name.txt` scripts, `sections.json`, `sources.json`; generated: `vN/`, `final/`, `timeline.json`                                                                                                                      |
-| `music/`                                     | video  | `scorekit/`, `render.py` with `--selftest`; `CREDITS.md` lists the sample libraries                                                                                                                                                                            | `arrangement.py`: `compose(seed) -> Score`                                                                                                                                                                              |
+| `music/`                                     | video  | `scorekit/` (`beatgrid` and `finish` serve Lyria takes), `render.py` with `--selftest`, `lyria.py` (`gen`, `finish`, `--selftest`); `CREDITS.md` lists the sample libraries                                                                                    | `arrangement.py`: `compose(seed) -> Score`, or with Lyria `lyria/prompt.md`                                                                                                                                             |
 | `motion/`                                    | video  | `lib/` (`gfx`, `design`, `logo`, `ease`, `encode`, `scene`, `ui`, `selftest`; the Slack, Linear and GitHub windows: `win`, `icons`, `logos`, `slack_*`, `linear_*`, `github_*`, `demo`), `reference/` (their research notes), `render.py` with `--selftest` and `--demo`, `render_all.sh` | `scenes/<name>.py` (one per scene, defining `SCENE`), `scenes.txt`                                                                                                                                                      |
 | `edit/`                                      | video  | `editkit/` (`compositor`, `gpu`, `hw`, `decode`, `scene`, `ease`, `shaders/`, `cards`, `art`, `design`, `assets`, `shots`, `credit_data`, `outputs`, `project`); `render.py`, `mix.py`, `words.py`, `subs.py`, `credits.py`, `bg_test.py`                      | `edl.py`: `END`, `build()`, optional `BROLL_CLIPS`, `BUSY`, `FPS`; optional `credits.json`; `ISSUES.md`                                                                                                                  |
 | `broll/`                                     | video  | `CREDITS.md` (the format for CC BY clips)                                                                                                                                                                                                                      | `gen/shots.json` (prompts), a `CREDITS.md` section per CC BY clip                                                                                                                                                       |
@@ -1356,6 +1366,10 @@ What went wrong in finished projects, for both media. Each medium guide and
   libraries unless it runs with `--no-samples`. `music/CREDITS.md` records
   sources, files, licences and which instruments each library supplies; everything else in the
   score is synthesized.
+- **Lyria music** (video, when `project.json` `music` names a Lyria model): generated by Google's
+  Lyria through the Gemini API; no attribution required, and the credits list none. Every song
+  carries Google's SynthID watermark. `lyria.py finish` records the model, the take and the
+  prompt file in `music/CREDITS.md`. Whether the video discloses AI music is the human's call.
 - **B-roll** (video): generated with Gemini Omni; no attribution required. `broll/CREDITS.md`
   states this and holds a section for any CC BY clip added later. A b-roll still or clip reused in
   the post carries the same credit.

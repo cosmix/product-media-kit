@@ -11,7 +11,7 @@ Each folder is its own uv project with a committed `uv.lock` (run with `uv run -
 - `post` (`postkit`, python >=3.13, same build bound): pillow>=12.3.0; per-file ignore of `I001` for the frozen `tests/test_contracts.py`.
 - `edit` (`editkit`, python >=3.12): moderngl, glcontext, numpy, pillow, scipy, soundfile, pyloudnorm, faster-whisper, onnxruntime (macOS Intel keeps older moderngl, glcontext and onnxruntime through platform markers).
 - `motion` (python >=3.12): skia-python, moderngl, glcontext, numpy, pillow.
-- `music` (`scorekit`, python >=3.12): numpy, scipy, soundfile, soxr, pyloudnorm, matplotlib, pedalboard.
+- `music` (`scorekit`, python >=3.12): numpy, scipy, soundfile (its libsndfile reads and writes MP3, so `lyria.py` needs no ffmpeg), soxr, pyloudnorm, matplotlib, pedalboard, google-genai (`lyria.py`); dev pytest for `music/tests/`.
 - `tests` (`kit-tests`, python >=3.13): no runtime deps.
 - PEP 723 scripts: `tools/fonts.py` (fonttools), `tools/listen.py` and `tools/genvideo.py` (google-genai), `tools/costs.py`; `claude-skills/brand/check.py` (fonttools, pillow), `claude-skills/narration/tts.py` (google-genai).
 - Every package's `uv_build` bound stays in step with the uv the kit locks with (0.12.x); a stale bound makes every build print a warning.
@@ -21,8 +21,8 @@ Each folder is its own uv project with a committed `uv.lock` (run with `uv run -
 - ffmpeg: video needs libx264, prores_ks and aac (MISSING otherwise); blog clips need libvpx-vp9 (WARN). Hardware encoders `h264_nvenc` and `h264_videotoolbox` are optional.
 - Playwright's Chromium (`setup.sh` installs it), tmux (`tmux_clip.py`), `fc-list` and `fc-match` (`tuicap/fonts.py`, `tools/fonts.py`, `postkit/design.py`), `xz` and `unzip` (sample archives), Mesa EGL on machines without a GPU driver.
 - tuicap fallback fonts are looked up by family through fontconfig (DejaVu Sans Mono, Noto Sans Symbols2, Noto Sans Symbols, Noto Sans Math, Noto Color Emoji on Linux; Menlo, Apple Symbols, Apple Color Emoji on macOS).
-- External services: Gemini (`GEMINI_API_KEY`) for narration (TTS), generated b-roll (Omni) and the listening judge; billed per request and estimated in `<project>/COSTS.md`.
-- Sample libraries are fetched by `setup.sh` into `music/samples/`: VSCO-2 CE always, Salamander Grand Piano only when `project.json` `piano` is `salamander`.
+- External services: Gemini (`GEMINI_API_KEY`) for narration (TTS), generated b-roll (Omni), Lyria music (`music/lyria.py`, paid tier only) and the listening judge; billed per request and estimated in `<project>/COSTS.md`.
+- Sample libraries are fetched by `setup.sh` into `music/samples/` only when `project.json` `music` is `score` (the default): VSCO-2 CE always, Salamander Grand Piano only when `piano` is `salamander`.
 
 ## Kit scripts
 

@@ -23,13 +23,15 @@ Usage: ./setup.sh [--check] [--for video|blog|both] [--no-samples]
 
   (no flag)     install Python environments, the Claude Code skills (brand, narration,
                 begin; into .claude/skills/ of this project), Chromium and, for a
-                video, the Whisper model and sample libraries: VSCO (about 2.2 GB
-                download), plus the Salamander grand piano (1.2 GB) only when
-                project.json's piano is salamander (./configure.sh)
+                video, the Whisper model and, when project.json's music is score
+                (the default), the sample libraries: VSCO (about 2.2 GB download),
+                plus the Salamander grand piano (1.2 GB) only when project.json's
+                piano is salamander (./configure.sh)
   --for MEDIUM  check and set up only what MEDIUM needs: video, blog or both. Without it
                 the media in project.json are used; with none there, everything
-  --no-samples  skip the sample libraries: a video without music, or with a
-                score of synthesized instruments only, does not need them
+  --no-samples  skip the sample libraries: a video without music, with a Lyria
+                soundtrack, or with a score of synthesized instruments only, does not
+                need them
   --check       report what is ready and what is missing; change nothing
 
 Exit status is 1 if anything required is MISSING, else 0. The Gemini API key,
@@ -366,7 +368,7 @@ check_api_key() {
   if [ -n "${GEMINI_API_KEY:-}${GOOGLE_API_KEY:-}" ]; then
     status ok "Gemini API key"
   else
-    status WARN "Gemini API key" "optional: only a narrated voice (TTS), generated b-roll (tools/genvideo.py) and the listening judge (tools/listen.py) call Gemini; without it the lead reviews audio with ffmpeg measurements only. For them, create a key at https://aistudio.google.com/apikey and start Claude Code with it: GEMINI_API_KEY=... claude  Enable billing: the free tier allows only 10 TTS requests a day."
+    status WARN "Gemini API key" "optional: only a narrated voice (TTS), generated b-roll (tools/genvideo.py), Lyria music (music/lyria.py) and the listening judge (tools/listen.py) call Gemini; without it the lead reviews audio with ffmpeg measurements only. For them, create a key at https://aistudio.google.com/apikey and start Claude Code with it: GEMINI_API_KEY=... claude  Enable billing: the free tier allows only 10 TTS requests a day and no Lyria."
   fi
 }
 

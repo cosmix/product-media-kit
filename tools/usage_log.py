@@ -46,6 +46,15 @@ def from_generate(meta):
     }
 
 
+def slim(obj):
+    """A response dump with large blobs (base64 audio or video) replaced, so metadata stays readable."""
+    if isinstance(obj, dict):
+        return {k: slim(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [slim(v) for v in obj]
+    return "<blob>" if isinstance(obj, str) and len(obj) > 2000 else obj
+
+
 def summary(usage):
     """One line for the terminal, e.g. 'tokens in 120 (text 120), out 2,450 (audio 2,450)'."""
     if usage is None:

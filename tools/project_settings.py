@@ -1,7 +1,9 @@
-"""The video's saved choices in project.json: frame rate (`fps`) and piano library (`piano`).
+"""The video's saved choices in project.json: frame rate (`fps`), piano library (`piano`) and the
+music source (`music`).
 
 Read by setup (sample libraries), the captures, motion, music and the edit; written by
-./configure.sh, which keeps every other key (`slug`, `media`).
+./configure.sh, which keeps every other key (`slug`, `media`). `fps` and `piano` are asked for
+together; `music` is optional (scorekit's sample score when absent) and set on its own.
 """
 
 import argparse
@@ -11,7 +13,9 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULTS = {"fps": 30, "piano": "vsco"}
+DEFAULTS = {"fps": 30, "piano": "vsco", "music": "score"}
+ASKED = ("fps", "piano")  # configure() asks for these when neither given nor saved
+MUSIC = ("score", "lyria-3.5", "lyria-3-clip-preview", "none")
 
 
 def _saved(path):
@@ -22,17 +26,19 @@ def _saved(path):
 
 
 def _validated(path, settings):
-    """`settings` when its fps and piano are valid; ValueError naming `path` otherwise."""
+    """`settings` when its fps, piano and music are valid; ValueError naming `path` otherwise."""
     fps = settings["fps"]
     if type(fps) is not int or not 1 <= fps <= 120:
         raise ValueError(f"{path}: fps must be an integer from 1 to 120")
     if settings["piano"] not in ("vsco", "salamander"):
         raise ValueError(f"{path}: piano must be vsco or salamander")
+    if settings["music"] not in MUSIC:
+        raise ValueError(f"{path}: music must be one of {', '.join(MUSIC)}")
     return settings
 
 
 def read(root=ROOT):
-    """project.json under `root` with DEFAULTS for absent keys; ValueError for a bad fps or piano."""
+    """project.json under `root` with DEFAULTS for absent keys; ValueError for a bad fps, piano or music."""
     path = Path(root) / "project.json"
     return _validated(path, DEFAULTS | _saved(path))
 
@@ -45,14 +51,8 @@ def ask(prompt, default, valid):
         print("Please choose one of the listed values.")
 
 
-def configure(root, fps=None, piano=None):
-    """Save `fps` and `piano` in root/project.json, keeping its other keys. A choice not given
-    keeps the saved one; one neither given nor saved is asked on a terminal, else ValueError.
-    The merged result is validated before it is written, so a new value repairs a bad saved one."""
-    path = root / "project.json"
-    saved = _saved(path)
-    if fps is None and piano is None and DEFAULTS.keys() <= saved.keys():
-        return read(root)
+def _fps_and_piano(saved, fps, piano):
+    """{"fps", "piano"}: each the given value, else the saved one, else asked on a terminal."""
     fps = fps if fps is not None else saved.get("fps")
     piano = piano or saved.get("piano")
     if fps is None or piano is None:
@@ -66,9 +66,26 @@ def configure(root, fps=None, piano=None):
             piano = ask("Piano: vsco (CC0, no attribution) or salamander "
                         "(grand piano, requires on-screen CC BY 3.0 attribution)",
                         DEFAULTS["piano"], lambda s: s in ("vsco", "salamander"))
-    merged = _validated(path, DEFAULTS | saved | {"fps": fps, "piano": piano})
+    return {"fps": fps, "piano": piano}
+
+
+def configure(root, fps=None, piano=None, music=None):
+    """Save the given choices in root/project.json, keeping its other keys. `music` alone is saved
+    as is. Otherwise a choice of fps or piano not given keeps the saved one; one neither given nor
+    saved is asked on a terminal, else ValueError. The merged result is validated before it is
+    written, so a new value repairs a bad saved one."""
+    path = root / "project.json"
+    saved = _saved(path)
+    new = {}
+    if fps is not None or piano is not None or (music is None and not set(ASKED) <= saved.keys()):
+        new = _fps_and_piano(saved, fps, piano)
+    if music is not None:
+        new["music"] = music
+    if not new:
+        return read(root)
+    _validated(path, DEFAULTS | saved | new)
     root.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(saved | {"fps": merged["fps"], "piano": merged["piano"]}, indent=2) + "\n")
+    path.write_text(json.dumps(saved | new, indent=2) + "\n")
     return read(root)
 
 
@@ -77,13 +94,14 @@ def main():
     ap.add_argument("--root", type=Path, default=ROOT)
     ap.add_argument("--fps", type=int, choices=range(1, 121), metavar="1–120")
     ap.add_argument("--piano", choices=("vsco", "salamander"))
-    ap.add_argument("--get", choices=("fps", "piano"))
+    ap.add_argument("--music", choices=MUSIC)
+    ap.add_argument("--get", choices=tuple(DEFAULTS))
     args = ap.parse_args()
     try:
         if args.get:
             print(read(args.root)[args.get])
         else:
-            print(json.dumps(configure(args.root, args.fps, args.piano)))
+            print(json.dumps(configure(args.root, args.fps, args.piano, args.music)))
     except (ValueError, EOFError) as exc:
         ap.exit(2, f"{exc}\n")
 

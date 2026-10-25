@@ -1,7 +1,9 @@
 # Sample credits
 
-The soundtrack uses VSCO by default. Salamander is available only with the user's
-explicit opt-in in `project.json`. Libraries live under `music/samples/`.
+A sample score uses VSCO by default. Salamander is available only with the user's
+explicit opt-in in `project.json`. Libraries live under `music/samples/`. A Lyria soundtrack
+uses no samples: `uv run lyria.py finish` adds a "Lyria soundtrack" section recording the model,
+the take and the prompt file. It has no Licence line, so it is never credited on screen.
 Everything else (kick, claps, snaps, sub bass, synth pluck, risers, sub drop,
 room and hall reverbs) is synthesized in `scorekit/synth.py` and `scorekit/mix.py`.
 

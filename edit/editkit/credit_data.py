@@ -1,8 +1,9 @@
 """Credits as data, read from the workstreams' credit files, for the on-screen credits and the
 video description (credits.py).
 
-Credits carry only what a licence requires: CC BY b-roll and CC BY samples. CC0 samples
-and the TTS narration need no attribution, and a video without music or b-roll credits none.
+Credits carry only what a licence requires: CC BY b-roll and CC BY samples. CC0 samples,
+the TTS narration and a Lyria soundtrack need no attribution, and a video without music or
+b-roll credits none.
 Optional rows the human asks for go in edit/credits.json (guides/video.md, "Subtitles and credits"):
 
     {"title": "<product>: introduction", "rows": [["Narration", "Gemini TTS (<voice>)"]]}
@@ -15,6 +16,7 @@ from dataclasses import dataclass
 from .assets import ROOT, SOUNDTRACK
 
 CREDITS_JSON = ROOT / "edit" / "credits.json"
+LYRIA_RECORD = "Lyria soundtrack"  # the heading music/scorekit/finish.py writes in music/CREDITS.md
 
 
 @dataclass
@@ -73,7 +75,9 @@ def broll(names: list[str]) -> list[Credit]:
 
 def music_samples() -> list[Credit]:
     """Sample libraries whose licence requires attribution (CC0 ones are left out); none
-    without a soundtrack."""
+    without a soundtrack. The Lyria soundtrack record that `lyria.py finish` writes is a record,
+    not a licence, and is never credited; any other section is credited, a missing Licence line
+    included."""
     path = ROOT / "music" / "CREDITS.md"
     if not path.exists() or not SOUNDTRACK.exists():
         return []
@@ -82,6 +86,8 @@ def music_samples() -> list[Credit]:
     out = []
     for heading, s in _md_sections(path).items():
         if heading.startswith("Salamander") and used is not None and "salamander" not in used:
+            continue
+        if heading == LYRIA_RECORD:
             continue
         source = s.get("Source", "")
         by, _, url = source.partition(",")
