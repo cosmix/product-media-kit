@@ -638,20 +638,22 @@ kickoff proper.
 The `install` skill (`.claude/skills/install/SKILL.md` in the kit, not copied into projects):
 
 1. Ask where the project goes (the folder name becomes the slug), what to make (video, blog post
-   or both, and which first), and for a video the frame rate (30 suggested), whether it has music
-   and, with music, the piano library: VSCO (CC0, no attribution) unless the human explicitly
-   picks the Salamander grand piano (CC BY 3.0: credited on screen and in the video description).
-   Also whether narration or generated b-roll is likely, which decides the Gemini key.
+   or both, and which first), and for a video the frame rate (30 suggested), the music source
+   (`score` from sample libraries, `lyria-3.5`, `lyria-3-clip-preview` or `none`) and, with
+   `score`, the piano library: VSCO (CC0, no attribution) unless the human explicitly picks the
+   Salamander grand piano (CC BY 3.0: credited on screen and in the video description). Also
+   whether narration, Lyria or generated b-roll is likely, which decides the Gemini key.
 2. Run `./install.sh <dir> --no-system`, unless `<dir>/project.json` exists (a rerun after a
    restart resumes).
 3. Show `<dir>/system-deps.sh --dry-run --for <media>`; the human runs `./system-deps.sh` in a
    second terminal (or gives the dry run to an administrator), and the skill rechecks. The skill
    never runs sudo or the script itself.
-4. Save the choices with `./configure.sh --fps N --piano vsco|salamander` and write `media` into
-   `project.json`. A human who asks Claude to decide gets 30 fps and VSCO.
-5. Run `./setup.sh --check --for <media>` then `./setup.sh --for <media>` (`--no-samples` without
-   music) until `0 MISSING`.
-6. The Gemini key, when narration, b-roll or the listening judge is likely and the key is unset:
+4. Save the choices with `./configure.sh --fps N --piano vsco|salamander --music <source>` and
+   write `media` into `project.json`. A human who asks Claude to decide gets 30 fps, `score` and
+   VSCO.
+5. Run `./setup.sh --check --for <media>` then `./setup.sh --for <media>` (samples only for
+   `score`) until `0 MISSING`.
+6. The Gemini key, when narration, Lyria, b-roll or the listening judge is likely and the key is unset:
    the human creates it with billing on.
 7. Hand over: `cd <dir> && claude` (`cd <dir> && GEMINI_API_KEY=<key> claude` with the key), then
    `/begin`.

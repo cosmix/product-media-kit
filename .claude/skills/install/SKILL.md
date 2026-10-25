@@ -1,6 +1,6 @@
 ---
 name: install
-description: Install the kit into a new project folder, from the kit folder. Asks where the project goes and what to make (a video, a blog post or both), copies the kit with install.sh, shows the system packages the human must install in a second terminal, saves a video's frame rate and piano, runs setup.sh until nothing is MISSING, helps with the Gemini key and ends with the command that starts the project. Use on "/install", "install the kit", "set up a project", "new project".
+description: Install the kit into a new project folder, from the kit folder. Asks where the project goes and what to make (a video, a blog post or both), copies the kit with install.sh, shows the system packages the human must install in a second terminal, saves a video's frame rate, music source and piano, runs setup.sh until nothing is MISSING, helps with the Gemini key and ends with the command that starts the project. Use on "/install", "install the kit", "set up a project", "new project".
 ---
 
 # Install
@@ -21,16 +21,22 @@ Ask these together:
 - **What to make**: a video, a blog post or both; for both, which comes first.
 - **For a video**:
   - **Frame rate**: suggest 30 fps; any whole number from 1 to 120.
-  - **Music**: whether the video has music. The sample libraries are needed only for a score with
-    sampled instruments: VSCO-2 CE, about 2.2 GB.
-  - **Piano**, only with music: VSCO's upright (CC0, no attribution), unless the human explicitly
+  - **Music**: where the video's music comes from, saved as `music`:
+    - `score`: a score composed with sample libraries (VSCO-2 CE, about 2.2 GB to download).
+    - Lyria, Google's music model through the Gemini API (needs the Gemini key, step 7; no
+      samples): `lyria-3.5`, a full song of about two minutes at $0.08 per take, or
+      `lyria-3-clip-preview`, a 30 s clip at $0.04 per take.
+    - `none`: no music.
+
+    Genre, feel and arrangement are for `/begin`; do not ask them here.
+  - **Piano**, only with `score`: VSCO's upright (CC0, no attribution), unless the human explicitly
     picks the Salamander grand piano. Explain its duty first: CC BY 3.0, credited on screen and in
     the video description; 1.2 GB more to download. Never select or download Salamander without
     that explicit choice.
-- **Gemini**: whether narration, generated b-roll or the listening judge is likely. It decides
-  whether step 7 applies.
+- **Gemini**: whether narration, Lyria music, generated b-roll or the listening judge is likely.
+  It decides whether step 7 applies.
 
-If the human asks you to decide: 30 fps and VSCO.
+If the human asks you to decide: 30 fps, `score` and VSCO.
 
 ## 2. Copy the kit
 
@@ -43,7 +49,7 @@ after a restart): skip to step 3. Otherwise run:
 
 `install.sh` first updates the kit with `git pull --ff-only` when the kit is a git checkout with an
 upstream. If that fails it exits 1 and writes nothing: show the git error and ask whether to rerun
-with `--no-pull`, which installs the local copy as is. Do not pass `--fps` or `--piano` here: they make `install.sh` run `configure.sh`, which step 5 does
+with `--no-pull`, which installs the local copy as is. Do not pass `--fps`, `--piano` or `--music` here: they make `install.sh` run `configure.sh`, which step 5 does
 once the machine is ready. Read the output; relay the slug note if there is one.
 
 ## 3. System packages
@@ -77,9 +83,10 @@ makes that resume.
 
 ## 5. Save the choices
 
-For a video, run `<dir>/configure.sh --fps <N> --piano <vsco|salamander>`. A video without music
-saves `--piano vsco`. Then write `media` into `<dir>/project.json` with the Edit tool: an array in
-the agreed order (`["video", "blog"]`, `["blog"]`, ...), keeping `slug`, `fps` and `piano`. `/begin`
+For a video, run `<dir>/configure.sh --fps <N> --piano <vsco|salamander> --music <score|lyria-3.5|lyria-3-clip-preview|none>`.
+A video without a sample score saves `--piano vsco`. Then write `media` into `<dir>/project.json`
+with the Edit tool: an array in the agreed order (`["video", "blog"]`, `["blog"]`, ...), keeping
+`slug`, `fps`, `piano` and `music`. `/begin`
 reads it and does not ask again.
 
 ## 6. Set up the machine
@@ -89,8 +96,9 @@ reads it and does not ask again.
 <dir>/setup.sh --for <media>
 ```
 
-Add `--no-samples` to the second command when the video has no music or the human is unsure (the
-samples can be fetched later by rerunning without it). Repeat until the summary shows
+`setup.sh` downloads the sample libraries only when `music` is `score`. Add `--no-samples` to the
+second command when the human is unsure about a sample score (the samples can be fetched later by
+rerunning without it). Repeat until the summary shows
 `0 MISSING`; a MISSING system package sends the human back to step 3. WARN lines are optional:
 explain one only when it matters for this project (for a post, ffmpeg matters only when it has
 clips). A video without captures ignores the Chromium, tmux and terminal-font WARNs ("web/terminal
@@ -98,9 +106,10 @@ captures only").
 
 ## 7. The Gemini key
 
-Needed for narration, generated b-roll and the listening judge; a post needs none. When one is
-likely, tell the human to create a key at https://aistudio.google.com/apikey with billing on (the
-free tier allows 10 voice requests a day, which runs out during voice auditions) and to pass it
+Needed for narration, Lyria music, generated b-roll and the listening judge; a post needs none.
+When one is likely, tell the human to create a key at https://aistudio.google.com/apikey with
+billing on (the free tier allows 10 voice requests a day, which runs out during voice auditions,
+and has no Lyria at all) and to pass it
 when starting `claude` in the project (step 8). Never ask them to paste the key into the chat.
 
 ## 8. Hand over
